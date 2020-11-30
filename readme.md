@@ -31,12 +31,10 @@ Step 4: For this example, let's manually move the window somewhere else on the d
 
 Step 5: We move the focused window to the rect/geometry described by the Rect ID we set earlier by typing directly at the window: `mtr1` followed by `<RCtrl>`
 
----
-
 
 **Syntax**
 
-Move this to rect `n`
+Move this to rect
 
 | M | T | R | {Rect ID} |
 |---|---|---|-----------|
