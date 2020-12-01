@@ -1,6 +1,10 @@
 # winDozer
 ###### A pocket-sized, vim-esque language for the Windows DWM that's very much a work in progress
 
+<div align="center">
+<img src="https://i.imgur.com/Fzu3Ym2.png?1">
+</div>
+
 **Install & Run**
 
 ```
@@ -53,13 +57,13 @@ Print Rect IDs & their geometry to stdout, ordered by:
 
 (
 
-Left,
+Left coordinate,
 
-Top,
+Top coordinate,
 
-Bottom,
+Bottom coordinate,
 
-Right
+Right coordinate
 
 )
 
@@ -71,11 +75,25 @@ Right
 
 ###### Not implemented yet:
 
+Move Window
+
 | M | W | {Win ID} | {Rect ID} |
 |---|---|----------|-----------|
 
+Focus Window
+
 | F | W | {Win ID} |
 |---|---|----------|
+
+Set Window
+
+| S | W | {Win ID} |
+|---|---|----------|
+
+Help
+
+| H | E | L | P |
+|---|---|---|---|
 
 ---
 
@@ -86,7 +104,6 @@ Right
 - Class(es) / Structure(s) / OOP
 - Qt GUI
 - Probably a `configuration.h`
-- Data persistence
 - Enforce single instance
 - Main Flags
     - Verbose/log/debug
