@@ -105,8 +105,5 @@ Help
 - Qt GUI
 - Probably a `configuration.h`
 - Enforce single instance
-- Main Flags
-    - Verbose/log/debug
-    - Buffer Flush
-- Buffer Flags
+- Buffer syntax
     - (W)indow

@@ -20,6 +20,9 @@ std::map<std::string, std::vector<int>> rectMap;
 
 char* appData;
 
+bool disableBufferFlush{ false };
+bool verbose{ false };
+
 void loadRectIDs() {
     std::string rectCoord;
     std::string rectID;
@@ -73,6 +76,10 @@ void setRectID(std::string rectID) {
 
 
 void printRectIDs(int outMode = STDOUT, char* path = nullptr) {
+    if (rectMap.empty()) {
+        std::cout << "No registered Rect ID(s) found\n";
+    }
+
     if (outMode == FILE) freopen(path, "w", stdout);
 
     for (auto it = rectMap.begin(); it != rectMap.end(); it++) {
@@ -88,6 +95,11 @@ void printRectIDs(int outMode = STDOUT, char* path = nullptr) {
 
 
 void moveFocusedWindow(std::string rectID) {
+    if (!rectMap.count(rectID)) {
+        std::cout << "No registered rects found for Rect ID: " << rectID << "\n";
+        return;
+    }
+
     HWND hActvWnd = GetForegroundWindow();
     MoveWindow(
         // Window Handle:
@@ -131,9 +143,11 @@ void readBuffer() {
     std::regex reMoveWin{ "(M){1}(T|W\\d+){1}(R\\d+){1}" };
     std::regex reSetRect{ "(SR){1}(\\d+){1}" };
     std::regex reGetRect{ "(\\w+|\\d+)(GR)" };
+    std::regex reFlush{ "FLUSH" };
 
     if (std::regex_search(inBuff, m, reMoveWin)) {
         match = m.str();
+        if (verbose) std::cout << match << "\n";
 
         // Work backwards over the input
         int i = match.length() - 1;
@@ -162,6 +176,7 @@ void readBuffer() {
         }
 
     }
+
     else if (std::regex_search(inBuff, m, reSetRect)) {
         match = m.str();
 
@@ -172,11 +187,16 @@ void readBuffer() {
         }
         setRectID(rectID);
     }
+
     else if (std::regex_match(inBuff, reGetRect)) {
         printRectIDs();
     }
 
-    flushBuffer();
+    else if (std::regex_search(inBuff, reFlush)) {
+        flushBuffer();
+    }
+
+    if (!disableBufferFlush) flushBuffer();
 }
 
 
@@ -230,6 +250,25 @@ LRESULT CALLBACK hookProc(int code, WPARAM wParam, LPARAM lParam) {
 }
 
 
+void initArgs(int argc, char* argv[]) {
+    if (argc < 2) return;
+
+    std::string flag;
+    for (int i = 1; i < argc; i++) {
+        flag = argv[i];
+
+        if (flag == "dbf") {
+            disableBufferFlush = true;
+        }
+
+        if (flag == "verbose") {
+            verbose = true;
+        }
+
+    }
+}
+
+
 void initAppData() {
     appData = getenv("APPDATA");
     strcat(appData, "\\winDozer");
@@ -273,6 +312,7 @@ int main(int argc, char* argv[]) {
             0))
         ) {
 
+        initArgs(argc, argv);
         initAppData();
         loadRectIDs();
         printFigletWelcome();
