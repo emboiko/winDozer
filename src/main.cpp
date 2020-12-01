@@ -5,7 +5,7 @@
 #include <map>
 #include <vector>
 #include <signal.h>
-#include "Windows.h"
+#include <Windows.h>
 
 #define STDOUT 0
 #define FILE 1
@@ -18,7 +18,8 @@ char inBuff[BUFFSIZE];
 
 std::map<std::string, std::vector<int>> rectMap;
 
-char* appData;
+std::string appData;
+std::string settings;
 
 bool disableBufferFlush{ false };
 bool verbose{ false };
@@ -30,7 +31,7 @@ void loadRectIDs() {
     std::regex reRectID{ "Rect ID\\s{1}(\\d+){1}:{1}" };
 
     std::string line;
-    std::fstream inFile(appData);
+    std::fstream inFile(settings);
     while (std::getline(inFile, line)) {
 
         if (std::regex_match(line, reRectID)) {
@@ -75,12 +76,12 @@ void setRectID(std::string rectID) {
 }
 
 
-void printRectIDs(int outMode = STDOUT, char* path = nullptr) {
+void printRectIDs(int outMode = STDOUT, std::string path = "") {
     if (rectMap.empty()) {
         std::cout << "No registered Rect ID(s) found\n";
     }
 
-    if (outMode == FILE) freopen(path, "w", stdout);
+    if (outMode == FILE) freopen(path.c_str(), "w", stdout);
 
     for (auto it = rectMap.begin(); it != rectMap.end(); it++) {
         std::string rectID = it->first;
@@ -271,16 +272,18 @@ void initArgs(int argc, char* argv[]) {
 
 void initAppData() {
     appData = getenv("APPDATA");
-    strcat(appData, "\\winDozer");
+    appData.append("\\winDozer");
     if (!std::filesystem::exists(appData)) {
         std::filesystem::create_directory(appData);
     }
-    strcat(appData, "\\settings.txt");
+
+    settings = appData;
+    settings.append("\\settings.txt");
 }
 
 
 void exitHandler(int SIG) {
-    printRectIDs(FILE, appData);
+    printRectIDs(FILE, settings);
     UnhookWindowsHookEx(hHook);
     exit(SIG);
 }
@@ -293,6 +296,27 @@ void printFigletWelcome() {
     std::cout << (" \\ V  V /| | | | |/ /_// (_) / /  __/ |   \n");
     std::cout << ("  \\_/\\_/ |_|_| |_/____/ \\___/___\\___|_|\n\n");
     std::cout << ("Press Ctrl+C to exit.\n\n");
+}
+
+
+void excludeOthers() {
+    std::string lockPath = appData;
+    lockPath.append("\\lock");
+
+    HANDLE hFile = CreateFileA(
+        lockPath.c_str(),
+        (GENERIC_READ | GENERIC_WRITE),
+        0,
+        NULL,
+        CREATE_ALWAYS,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL
+    );
+
+    if (hFile == INVALID_HANDLE_VALUE) {
+        exit(0);
+    }
+
 }
 
 
@@ -312,8 +336,9 @@ int main(int argc, char* argv[]) {
             0))
         ) {
 
-        initArgs(argc, argv);
         initAppData();
+        excludeOthers();
+        initArgs(argc, argv);
         loadRectIDs();
         printFigletWelcome();
         flushBuffer();

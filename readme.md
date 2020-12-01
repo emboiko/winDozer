@@ -132,6 +132,5 @@ By default, the buffer is flushed on `<RCtrl>`, which acts as winDozer's flavor 
 - Class(es) / Structure(s) / OOP
 - Qt GUI
 - Probably a `configuration.h`
-- Enforce single instance
 - Buffer syntax
     - (W)indow
