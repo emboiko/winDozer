@@ -1,9 +1,14 @@
 #include <iostream>
+#include <filesystem>
+#include <fstream>
 #include <regex>
 #include <map>
 #include <vector>
 #include <signal.h>
 #include "Windows.h"
+
+#define STDOUT 0
+#define FILE 1
 
 KBDLLHOOKSTRUCT kbdStruct;
 HHOOK hHook;
@@ -12,6 +17,41 @@ const short BUFFSIZE{ 7 };
 char inBuff[BUFFSIZE];
 
 std::map<std::string, std::vector<int>> rectMap;
+
+char* appData;
+
+void loadRectIDs() {
+    std::string rectCoord;
+    std::string rectID;
+    std::vector<int> rect;
+    std::regex reRectID{ "Rect ID\\s{1}(\\d+){1}:{1}" };
+
+    std::string line;
+    std::fstream inFile(appData);
+    while (std::getline(inFile, line)) {
+
+        if (std::regex_match(line, reRectID)) {
+            line.erase(0, 8); // trim prefix
+            line.erase(line.length() - 1, 1); // trim suffix
+            rectID = line;
+
+            rect.erase(rect.begin(), rect.end());
+
+            // Walk the next four lines for that rect ID and collect coords
+            for (int i = 0; i < 4; i++) {
+                std::getline(inFile, rectCoord);
+                rect.push_back(
+                    std::stoi(rectCoord)
+                );
+            }
+
+            rectMap[rectID] = rect;
+        }
+
+    }
+
+    inFile.close();
+}
 
 
 void setRectID(std::string rectID) {
@@ -32,7 +72,9 @@ void setRectID(std::string rectID) {
 }
 
 
-void printRectIDs() {
+void printRectIDs(int outMode = STDOUT, char* path = nullptr) {
+    if (outMode == FILE) freopen(path, "w", stdout);
+
     for (auto it = rectMap.begin(); it != rectMap.end(); it++) {
         std::string rectID = it->first;
         std::cout << "Rect ID " << rectID << ":\n";
@@ -40,6 +82,8 @@ void printRectIDs() {
             std::cout << "\t" << coordinate << "\n";
         }
     }
+
+    if (outMode == FILE) fclose(stdout);
 }
 
 
@@ -186,7 +230,18 @@ LRESULT CALLBACK hookProc(int code, WPARAM wParam, LPARAM lParam) {
 }
 
 
+void initAppData() {
+    appData = getenv("APPDATA");
+    strcat(appData, "\\winDozer");
+    if (!std::filesystem::exists(appData)) {
+        std::filesystem::create_directory(appData);
+    }
+    strcat(appData, "\\settings.txt");
+}
+
+
 void exitHandler(int SIG) {
+    printRectIDs(FILE, appData);
     UnhookWindowsHookEx(hHook);
     exit(SIG);
 }
@@ -218,9 +273,12 @@ int main(int argc, char* argv[]) {
             0))
         ) {
 
+        initAppData();
+        loadRectIDs();
         printFigletWelcome();
         flushBuffer();
         signal(SIGINT, exitHandler);
+        signal(SIGBREAK, exitHandler);
         LPMSG msg{};
         while (GetMessageW(msg, NULL, 0, 0)) {} // Hold the terminal open
 
