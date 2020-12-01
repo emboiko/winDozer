@@ -70,8 +70,16 @@ Right coordinate
 | G | R |
 |---|---|
 
+(Get rects)
+
 ---
 
+Manually flush the internal buffer
+
+| F | L | U | S | H |
+|---|---|---|---|---|
+
+---
 
 ###### Not implemented yet:
 
@@ -94,6 +102,26 @@ Help
 
 | H | E | L | P |
 |---|---|---|---|
+
+---
+
+**Command line arguments**
+
+`dbf` : Disable buffer flush
+
+If this flag is passed, `<RCtrl>` will only flush the buffer if the buffer contains "FLUSH". This is useful to repeat a previous action with fewer keystrokes, provided the buffer hasn't been polluted in the meantime.
+
+`verbose` : Verbose console output
+
+This flag satisfies a few conditionals that print some extra feedback to stdout, primarily regarding syntax evaluation.
+
+---
+
+**The buffer**
+
+Currently, winDozer's internal syntax buffer is implemented as a character array of length 7. This size is partially arbitrary, and may grow in size or undergo different implementations as the application is developed. The buffer is populated by continuously shifting in the latest *valid* `keydown` caught from a `WH_KEYBOARD_LL` hook, which is set and unhooked each time the application runs. 
+
+By default, the buffer is flushed on `<RCtrl>`, which acts as winDozer's flavor of `<Enter>`.
 
 ---
 
