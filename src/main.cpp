@@ -28,16 +28,37 @@ bool debugBuffer{ false };
 
 
 void printFigletWelcome() {
-    std::cout << ("          _          ___                  \n");
-    std::cout << ("__      _(_)_ __    /   \\___ _______ _ __ \n");
-    std::cout << ("\\ \\ /\\ / / | '_ \\  / /\\ / _ \\_  / _ \\ '__|\n");
-    std::cout << (" \\ V  V /| | | | |/ /_// (_) / /  __/ |   \n");
-    std::cout << ("  \\_/\\_/ |_|_| |_/____/ \\___/___\\___|_|\n\n");
-    std::cout << ("Press Ctrl+C to exit.\n\n");
+    std::cout
+        << ("          _          ___                  \n")
+        << ("__      _(_)_ __    /   \\___ _______ _ __ \n")
+        << ("\\ \\ /\\ / / | '_ \\  / /\\ / _ \\_  / _ \\ '__|\n")
+        << (" \\ V  V /| | | | |/ /_// (_) / /  __/ |   \n")
+        << ("  \\_/\\_/ |_|_| |_/____/ \\___/___\\___|_|\n\n")
+        << ("Press Ctrl+C to exit.\n\n");
 }
 
 
-void printHelp() {} // coming soon
+void printHelp() {
+    printFigletWelcome();
+    std::cout
+        << ("https://github.com/emboiko/winDozer\n\n")
+        << ("Flags:\n\n")
+        << ("\tverbose\n")
+        << ("\tdbf\n")
+        << ("\tdebug\n")
+        << ("\n")
+        << ("Syntax:\n\n")
+        << ("\tSR{Rect ID}\n")
+        << ("\tMTR{Rect ID}\n")
+        << ("\tSW{Window ID}\n")
+        << ("\tMW{Window ID}R{Rect ID}\n")
+        << ("\tFLUSH\n")
+        << ("\tHELP\n")
+        << ("\tGR\n")
+        << ("\tGW\n")
+        << ("\n");
+    ;
+}
 
 
 void loadRectIDs() {
@@ -210,6 +231,7 @@ void readBuffer() {
     std::regex reGetRect{ "(\\w|\\d)*(GR)" };
     std::regex reGetWins{ "(\\w|\\d)*(GW)" };
     std::regex reFlush{ "(\\d|\\w)*(FLUSH)" };
+    std::regex reHelp{ "(\\d|\\w)*(HELP)" };
 
     if (std::regex_match(inBuff, reFlush)) {
         flushBuffer();
@@ -274,6 +296,10 @@ void readBuffer() {
 
     else if (std::regex_match(inBuff, reGetWins)) {
         printWinIDs();
+    }
+
+    else if (std::regex_match(inBuff, reHelp)) {
+        printHelp();
     }
 
 

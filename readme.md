@@ -133,8 +133,6 @@ Print Window IDs & an associated title, if one can be gleaned from the window ha
 
 ---
 
-###### Not implemented yet:
-
 - Help
 
 | H | E | L | P |
@@ -152,6 +150,14 @@ If this flag is passed, `<RCtrl>` will only flush the buffer if the buffer conta
 
 This flag satisfies a few conditionals that print some extra feedback to stdout, primarily regarding syntax evaluation.
 
+
+`debug` <span style="color:#ccc">
+ : Debug mode 
+<br>
+</span>
+
+This flag is intended for development, and in most cases will flood stdout as the buffer is shifted with valid input. 
+
 ---
 
 **The buffer**
@@ -168,4 +174,3 @@ By default, the buffer is flushed on `<RCtrl>`, which acts as winDozer's flavor 
 **Todo**:
 - Class(es) / Structure(s) / OOP
 - Qt GUI
-- Help
