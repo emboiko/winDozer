@@ -108,6 +108,22 @@ void printRectIDs(int outMode = STDOUT, std::string path = "") {
     }
 
     if (outMode == FILE) fclose(stdout);
+
+    std::cout << "\n";
+}
+
+
+void printWinIDs() {
+    if (winMap.empty()) {
+        std::cout << "No registered Window ID(s) found\n";
+    }
+
+    char winText[MAX_PATH];
+    for (auto it = winMap.begin(); it != winMap.end(); it++) {
+        std::string winID = it->first;
+        GetWindowTextA(winMap[winID], winText, MAX_PATH);
+        std::cout << "Window ID " << winID << ":\t" << winText << "\n\n";
+    }
 }
 
 
@@ -136,6 +152,12 @@ void moveFocusedWindow(std::string rectID) {
 
 
 void moveWindow(std::string winID, std::string rectID) {
+    if (!winMap.count(winID)) {
+        std::cout << "No registered windows found for Window ID: "
+            << winID << "\n";
+        return;
+    }
+
     MoveWindow(
         winMap[winID],
         rectMap[rectID][0],
@@ -186,6 +208,7 @@ void readBuffer() {
     std::regex reSetWin{ "(SW){1}(\\d+){1}" };
     //matches
     std::regex reGetRect{ "(\\w|\\d)*(GR)" };
+    std::regex reGetWins{ "(\\w|\\d)*(GW)" };
     std::regex reFlush{ "(\\d|\\w)*(FLUSH)" };
 
     if (std::regex_match(inBuff, reFlush)) {
@@ -247,6 +270,10 @@ void readBuffer() {
 
     else if (std::regex_match(inBuff, reGetRect)) {
         printRectIDs();
+    }
+
+    else if (std::regex_match(inBuff, reGetWins)) {
+        printWinIDs();
     }
 
 

@@ -48,27 +48,62 @@ In the event that the buffer is evaluated containing multiple valid "words", win
 ###### (buffer conflicts should be rare but are certainly possible.)
 
 1. Flush
-2. Move this & ~~move window~~
-3. Set Rect
-4. Get Rects
+2. Move Window 
+3. Move This
+4. Set Rect ID
+5. Set Window ID
+6. Get Rects
+7. Get Windows
 
 
 **Syntax detail**
 
-Move this to rect
+- Flush
+
+Manually flush the internal buffer
+
+| F | L | U | S | H |
+|---|---|---|---|---|
+
+---
+
+- Move Window
+
+Move Window by it's Window ID to the rect described by a Rect ID
+
+| M | W | {Win ID} | {Rect ID} |
+|---|---|----------|-----------|
+
+---
+
+- Move This
+
+Move This [window] to Rect
 
 | M | T | R | {Rect ID} |
 |---|---|---|-----------|
 
 ---
 
-Set rect ID to geometry of focused window
+- Set Rect ID
+
+Set Rect ID to geometry of focused window
 
 | S | R | {Rect ID} |
 |---|---|-----------|
 
 ---
 
+- Set Window ID
+
+Set the Window ID of the focused window.
+
+| S | W | {Win ID} |
+|---|---|----------|
+
+---
+
+- Get Rects
 
 Print Rect IDs & their geometry to stdout, ordered by:
 
@@ -87,43 +122,20 @@ Right coordinate
 | G | R |
 |---|---|
 
-(Get rects)
-
 ---
 
-Manually flush the internal buffer
+- Get Windows
 
-| F | L | U | S | H |
-|---|---|---|---|---|
+Print Window IDs & an associated title, if one can be gleaned from the window handle. 
 
----
-
-Move Window by it's Window ID to the rect described by a Rect ID
-
-| M | W | {Win ID} | {Rect ID} |
-|---|---|----------|-----------|
-
----
-
-Set Window
-
-Set the Window ID of the focused window.
-
-| S | W | {Win ID} |
-|---|---|----------|
-
+| G | W |
+|---|---|
 
 ---
 
 ###### Not implemented yet:
 
-Focus Window
-
-| F | W | {Win ID} |
-|---|---|----------|
-
-
-Help
+- Help
 
 | H | E | L | P |
 |---|---|---|---|
@@ -156,7 +168,4 @@ By default, the buffer is flushed on `<RCtrl>`, which acts as winDozer's flavor 
 **Todo**:
 - Class(es) / Structure(s) / OOP
 - Qt GUI
-- Probably a `configuration.h`
-- Buffer syntax
-    - (W)indow
-    - Help
+- Help
