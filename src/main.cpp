@@ -150,12 +150,14 @@ void readBuffer() {
 
     std::cmatch m;
     std::string match;
+    //searches
     std::regex reMoveWin{ "(M){1}(T|W\\d+){1}(R\\d+){1}" };
     std::regex reSetRect{ "(SR){1}(\\d+){1}" };
-    std::regex reGetRect{ "(\\w+|\\d+)(GR)" };
-    std::regex reFlush{ "FLUSH" };
+    //matches
+    std::regex reGetRect{ "(\\w|\\d)*(GR)" };
+    std::regex reFlush{ "(\\d|\\w)*(FLUSH)" };
 
-    if (std::regex_search(inBuff, reFlush)) {
+    if (std::regex_match(inBuff, reFlush)) {
         flushBuffer();
     }
 
