@@ -52,8 +52,10 @@ In the event that the buffer is evaluated containing multiple valid "words", win
 3. Move This
 4. Set Rect ID
 5. Set Window ID
-6. Get Rects
-7. Get Windows
+6. Focus Window
+7. Get Rects
+8. Get Windows
+9. Help
 
 
 **Syntax detail**
@@ -129,6 +131,15 @@ Right coordinate
 Print Window IDs & an associated title, if one can be gleaned from the window handle. 
 
 | G | W |
+|---|---|
+
+---
+
+- Focus Window
+
+Focus window by its assigned {Win ID} 
+
+| F | W |
 |---|---|
 
 ---
