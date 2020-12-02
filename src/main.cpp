@@ -116,6 +116,7 @@ void setRectID(std::string rectID) {
 void printRectIDs(int outMode = STDOUT, std::string path = "") {
     if (rectMap.empty()) {
         std::cout << "No registered Rect ID(s) found\n";
+        return;
     }
 
     if (outMode == FILE) freopen(path.c_str(), "w", stdout);
@@ -137,6 +138,7 @@ void printRectIDs(int outMode = STDOUT, std::string path = "") {
 void printWinIDs() {
     if (winMap.empty()) {
         std::cout << "No registered Window ID(s) found\n";
+        return;
     }
 
     char winText[MAX_PATH];
@@ -145,6 +147,25 @@ void printWinIDs() {
         GetWindowTextA(winMap[winID], winText, MAX_PATH);
         std::cout << "Window ID " << winID << ":\t" << winText << "\n\n";
     }
+}
+
+
+void focusWindow(std::string winID) {
+    if (!winMap.count(winID)) {
+        std::cout << "No registered windows found for Window ID: "
+            << winID << "\n";
+        return;
+    }
+    SwitchToThisWindow(winMap[winID], FALSE);
+
+    // Remove the flash
+    FLASHWINFO flashInfo;
+    flashInfo.cbSize = sizeof(FLASHWINFO);
+    flashInfo.hwnd = winMap[winID];
+    flashInfo.dwFlags = FLASHW_STOP;
+    flashInfo.uCount = 0;
+    flashInfo.dwTimeout = 0;
+    FlashWindowEx(&flashInfo);
 }
 
 
@@ -185,7 +206,7 @@ void moveWindow(std::string winID, std::string rectID) {
         rectMap[rectID][1],
         rectMap[rectID][3] - rectMap[rectID][0],
         rectMap[rectID][2] - rectMap[rectID][1],
-        true
+        TRUE
     );
 }
 
@@ -227,6 +248,7 @@ void readBuffer() {
     std::regex reMoveWin{ "(M){1}(T|W\\d+){1}(R\\d+){1}" };
     std::regex reSetRect{ "(SR){1}(\\d+){1}" };
     std::regex reSetWin{ "(SW){1}(\\d+){1}" };
+    std::regex reFocusWin{ "(FW){1}(\\d+){1}" };
     //matches
     std::regex reGetRect{ "(\\w|\\d)*(GR)" };
     std::regex reGetWins{ "(\\w|\\d)*(GW)" };
@@ -288,6 +310,17 @@ void readBuffer() {
             i--;
         }
         setWinID(winID);
+    }
+
+    else if (std::regex_search(inBuff, m, reFocusWin)) {
+        match = m.str();
+
+        int i = match.length() - 1;
+        while (isdigit(match[i])) {
+            winID.insert(0, 1, match[i]);
+            i--;
+        }
+        focusWindow(winID);
     }
 
     else if (std::regex_match(inBuff, reGetRect)) {
