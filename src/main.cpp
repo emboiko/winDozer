@@ -23,6 +23,8 @@ std::string settings;
 
 bool disableBufferFlush{ false };
 bool verbose{ false };
+bool debugBuffer{ false };
+
 
 void loadRectIDs() {
     std::string rectCoord;
@@ -135,6 +137,13 @@ void flushBuffer() {
 }
 
 
+void printBuffer() {
+    // Debug helper
+    for (char c : inBuff) std::cout << c;
+    std::cout << ("\n");
+}
+
+
 void readBuffer() {
     std::string winID{ "" };
     std::string rectID{ "" };
@@ -146,7 +155,11 @@ void readBuffer() {
     std::regex reGetRect{ "(\\w+|\\d+)(GR)" };
     std::regex reFlush{ "FLUSH" };
 
-    if (std::regex_search(inBuff, m, reMoveWin)) {
+    if (std::regex_search(inBuff, reFlush)) {
+        flushBuffer();
+    }
+
+    else if (std::regex_search(inBuff, m, reMoveWin)) {
         match = m.str();
         if (verbose) std::cout << match << "\n";
 
@@ -175,7 +188,6 @@ void readBuffer() {
         else {
             moveFocusedWindow(rectID);
         }
-
     }
 
     else if (std::regex_search(inBuff, m, reSetRect)) {
@@ -193,18 +205,8 @@ void readBuffer() {
         printRectIDs();
     }
 
-    else if (std::regex_search(inBuff, reFlush)) {
-        flushBuffer();
-    }
 
     if (!disableBufferFlush) flushBuffer();
-}
-
-
-void printBuffer() {
-    // Helper
-    for (char c : inBuff) std::cout << c;
-    std::cout << ("\n");
 }
 
 
@@ -222,8 +224,8 @@ void ingressInput() {
         // Numpad
         inChar = kbdStruct.vkCode - 48; // Offset num0 @ 0
     }
-    else if ((kbdStruct.vkCode >= 112) && (kbdStruct.vkCode <= 123)) {
-        // Fn
+    else if ((kbdStruct.vkCode >= 112) && (kbdStruct.vkCode <= 120)) {
+        // Fn 1-9
         inChar = kbdStruct.vkCode - 63; // Offset Fn1 @ 1
     }
     else if (kbdStruct.vkCode == 163) {
@@ -237,6 +239,7 @@ void ingressInput() {
     }
 
     shiftBuffer(inChar);
+    if (debugBuffer) printBuffer();
 }
 
 
@@ -254,16 +257,19 @@ LRESULT CALLBACK hookProc(int code, WPARAM wParam, LPARAM lParam) {
 void initArgs(int argc, char* argv[]) {
     if (argc < 2) return;
 
-    std::string flag;
+    std::string flag; //g++ throws a warning without it
     for (int i = 1; i < argc; i++) {
         flag = argv[i];
-
         if (flag == "dbf") {
             disableBufferFlush = true;
         }
 
         if (flag == "verbose") {
             verbose = true;
+        }
+
+        if (flag == "debug") {
+            debugBuffer = true;
         }
 
     }

@@ -38,6 +38,23 @@ Step 5: We move the focused window to the rect/geometry described by the Rect ID
 
 **Syntax**
 
+Keystrokes considered *valid*:
+- A-Z
+- Numrow 0-9
+- Numpad 0-9
+- Fn 1-9
+
+In the event that the buffer is evaluated containing multiple valid "words", winDozer will choose one in the following precedence:
+###### (buffer conflicts should be rare but are certainly possible.)
+
+1. Flush
+2. Move this & ~~move window~~
+3. Set Rect
+4. Get Rects
+
+
+**Syntax detail**
+
 Move this to rect
 
 | M | T | R | {Rect ID} |
@@ -134,3 +151,4 @@ By default, the buffer is flushed on `<RCtrl>`, which acts as winDozer's flavor 
 - Probably a `configuration.h`
 - Buffer syntax
     - (W)indow
+    - Help
