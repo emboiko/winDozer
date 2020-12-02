@@ -98,22 +98,30 @@ Manually flush the internal buffer
 
 ---
 
-###### Not implemented yet:
-
-Move Window
+Move Window by it's Window ID to the rect described by a Rect ID
 
 | M | W | {Win ID} | {Rect ID} |
 |---|---|----------|-----------|
+
+---
+
+Set Window
+
+Set the Window ID of the focused window.
+
+| S | W | {Win ID} |
+|---|---|----------|
+
+
+---
+
+###### Not implemented yet:
 
 Focus Window
 
 | F | W | {Win ID} |
 |---|---|----------|
 
-Set Window
-
-| S | W | {Win ID} |
-|---|---|----------|
 
 Help
 

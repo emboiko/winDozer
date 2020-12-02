@@ -17,6 +17,7 @@ const short BUFFSIZE{ 7 };
 char inBuff[BUFFSIZE];
 
 std::map<std::string, std::vector<int>> rectMap;
+std::map<std::string, HWND> winMap;
 
 std::string appData;
 std::string settings;
@@ -24,6 +25,19 @@ std::string settings;
 bool disableBufferFlush{ false };
 bool verbose{ false };
 bool debugBuffer{ false };
+
+
+void printFigletWelcome() {
+    std::cout << ("          _          ___                  \n");
+    std::cout << ("__      _(_)_ __    /   \\___ _______ _ __ \n");
+    std::cout << ("\\ \\ /\\ / / | '_ \\  / /\\ / _ \\_  / _ \\ '__|\n");
+    std::cout << (" \\ V  V /| | | | |/ /_// (_) / /  __/ |   \n");
+    std::cout << ("  \\_/\\_/ |_|_| |_/____/ \\___/___\\___|_|\n\n");
+    std::cout << ("Press Ctrl+C to exit.\n\n");
+}
+
+
+void printHelp() {} // coming soon
 
 
 void loadRectIDs() {
@@ -121,7 +135,23 @@ void moveFocusedWindow(std::string rectID) {
 }
 
 
-void moveWindow(std::string winID, std::string rectID) {} // coming soon
+void moveWindow(std::string winID, std::string rectID) {
+    MoveWindow(
+        winMap[winID],
+        rectMap[rectID][0],
+        rectMap[rectID][1],
+        rectMap[rectID][3] - rectMap[rectID][0],
+        rectMap[rectID][2] - rectMap[rectID][1],
+        true
+    );
+}
+
+
+void setWinID(std::string winID) {
+    HWND hActvWnd = GetForegroundWindow();
+    winMap[winID] = hActvWnd;
+    std::cout << "SET Window ID " << winID << "\n\n";
+}
 
 
 void shiftBuffer(char inChar) {
@@ -153,6 +183,7 @@ void readBuffer() {
     //searches
     std::regex reMoveWin{ "(M){1}(T|W\\d+){1}(R\\d+){1}" };
     std::regex reSetRect{ "(SR){1}(\\d+){1}" };
+    std::regex reSetWin{ "(SW){1}(\\d+){1}" };
     //matches
     std::regex reGetRect{ "(\\w|\\d)*(GR)" };
     std::regex reFlush{ "(\\d|\\w)*(FLUSH)" };
@@ -182,7 +213,7 @@ void readBuffer() {
                 winID.insert(0, 1, match[i]);
                 i--;
             }
-            //Move over the (W)ect flag:
+            //Move over the (W) flag:
             i--;
             moveWindow(winID, rectID);
         }
@@ -201,6 +232,17 @@ void readBuffer() {
             i--;
         }
         setRectID(rectID);
+    }
+
+    else if (std::regex_search(inBuff, m, reSetWin)) {
+        match = m.str();
+
+        int i = match.length() - 1;
+        while (isdigit(match[i])) {
+            winID.insert(0, 1, match[i]);
+            i--;
+        }
+        setWinID(winID);
     }
 
     else if (std::regex_match(inBuff, reGetRect)) {
@@ -294,16 +336,6 @@ void exitHandler(int SIG) {
     printRectIDs(FILE, settings);
     UnhookWindowsHookEx(hHook);
     exit(SIG);
-}
-
-
-void printFigletWelcome() {
-    std::cout << ("          _          ___                  \n");
-    std::cout << ("__      _(_)_ __    /   \\___ _______ _ __ \n");
-    std::cout << ("\\ \\ /\\ / / | '_ \\  / /\\ / _ \\_  / _ \\ '__|\n");
-    std::cout << (" \\ V  V /| | | | |/ /_// (_) / /  __/ |   \n");
-    std::cout << ("  \\_/\\_/ |_|_| |_/____/ \\___/___\\___|_|\n\n");
-    std::cout << ("Press Ctrl+C to exit.\n\n");
 }
 
 
