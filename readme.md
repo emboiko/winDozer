@@ -60,15 +60,6 @@ In the event that the buffer is evaluated containing multiple valid "words", win
 
 **Syntax detail**
 
-- Flush
-
-Manually flush the internal buffer
-
-| F | L | U | S | H |
-|---|---|---|---|---|
-
----
-
 - Move Window
 
 Move Window by it's Window ID to the rect described by a Rect ID
@@ -105,6 +96,16 @@ Set the Window ID of the focused window.
 
 ---
 
+- Focus Window
+
+Focus window by its assigned {Win ID} 
+
+| F | W | {win ID} |
+|---|---| ---------|
+
+---
+
+
 - Get Rects
 
 Print Rect IDs & their geometry to stdout, ordered by:
@@ -133,14 +134,6 @@ Print Window IDs & an associated title, if one can be gleaned from the window ha
 | G | W |
 |---|---|
 
----
-
-- Focus Window
-
-Focus window by its assigned {Win ID} 
-
-| F | W |
-|---|---|
 
 ---
 
@@ -148,6 +141,15 @@ Focus window by its assigned {Win ID}
 
 | H | E | L | P |
 |---|---|---|---|
+
+---
+
+- Flush
+
+Manually flush the internal buffer
+
+| F | L | U | S | H |
+|---|---|---|---|---|
 
 ---
 
@@ -175,7 +177,7 @@ This flag is intended for development, and in most cases will flood stdout as th
 
 Currently, winDozer's internal syntax buffer is implemented as a character array of length 7. This size is partially arbitrary, and may grow in size or undergo different implementations as the application is developed. The buffer is populated by continuously shifting in the latest *valid* `keydown` caught from a `WH_KEYBOARD_LL` hook, which is set and unhooked each time the application runs. 
 
-By default, the buffer is flushed on `<RCtrl>`, which acts as winDozer's flavor of `<Enter>`.
+By default, the buffer is flushed on `<RCtrl>`, which acts as winDozer's flavor of `<Enter>`. This is configurable in `config.h`.
 
 ---
 
