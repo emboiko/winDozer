@@ -7,6 +7,8 @@
 #include <signal.h>
 #include <Windows.h>
 
+#include "config.h"
+
 #define STDOUT 0
 #define FILE 1
 
@@ -33,29 +35,30 @@ void printFigletWelcome() {
         << ("__      _(_)_ __    /   \\___ _______ _ __ \n")
         << ("\\ \\ /\\ / / | '_ \\  / /\\ / _ \\_  / _ \\ '__|\n")
         << (" \\ V  V /| | | | |/ /_// (_) / /  __/ |   \n")
-        << ("  \\_/\\_/ |_|_| |_/____/ \\___/___\\___|_|\n\n")
-        << ("Press Ctrl+C to exit.\n\n");
+        << ("  \\_/\\_/ |_|_| |_/____/ \\___/___\\___|_|\n\n");
 }
 
 
 void printHelp() {
     printFigletWelcome();
     std::cout
+        << ("Press Ctrl+C to exit.\n\n")
         << ("https://github.com/emboiko/winDozer\n\n")
         << ("Flags:\n\n")
-        << ("\tverbose\n")
-        << ("\tdbf\n")
-        << ("\tdebug\n")
+        << ("\tdbf\t\t\t\t Disable Buffer Flush\n")
+        << ("\tverbose\t\t\t\t Extra console feedback\n")
+        << ("\tdebug\t\t\t\t Flood stdout with esoteric logging\n")
         << ("\n")
         << ("Syntax:\n\n")
-        << ("\tSR{Rect ID}\n")
-        << ("\tMTR{Rect ID}\n")
-        << ("\tSW{Window ID}\n")
-        << ("\tMW{Window ID}R{Rect ID}\n")
-        << ("\tFLUSH\n")
-        << ("\tHELP\n")
-        << ("\tGR\n")
-        << ("\tGW\n")
+        << ("\tSR{Rect ID}\t\t\t Set Rect ID\n")
+        << ("\tMTR{Rect ID}\t\t\t Move This [window] to Rect\n")
+        << ("\tSW{Window ID}\t\t\t Set Window ID\n")
+        << ("\tMW{Window ID}R{Rect ID}\t\t Move Window to Rect\n")
+        << ("\tFW{Window ID}\t\t\t Focus registered Window by ID\n")
+        << ("\tGR\t\t\t\t Get/Print all registered Rects\n")
+        << ("\tGW\t\t\t\t Get/Print all registered Windows\n")
+        << ("\tFLUSH\t\t\t\t Flush Buffer\n")
+        << ("\tHELP\t\t\t\t Print this dialog\n")
         << ("\n");
     ;
 }
@@ -358,8 +361,7 @@ void ingressInput() {
         // Fn 1-9
         inChar = kbdStruct.vkCode - 63; // Offset Fn1 @ 1
     }
-    else if (kbdStruct.vkCode == 163) {
-        // RCtrl
+    else if (kbdStruct.vkCode == ENTER) {
         readBuffer();
         return;
     }
