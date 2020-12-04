@@ -139,7 +139,8 @@ void WinDozer::focusWindow(std::string winID) {
             << winID << "\n";
         return;
     }
-    SwitchToThisWindow(winMap[winID], FALSE);
+    ShowWindow(winMap[winID], SW_RESTORE); //Restore the window if it's minimized
+    SwitchToThisWindow(winMap[winID], FALSE); //Focus the window
 
     // Remove the flash
     FLASHWINFO flashInfo;

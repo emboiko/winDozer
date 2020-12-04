@@ -31,7 +31,6 @@ struct WinDozer {
     bool verbose;
     bool debugBuffer;
 
-
     void printFigletWelcome();
 
     void printHelp();
