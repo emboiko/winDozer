@@ -66,6 +66,8 @@ struct WinDozer {
     void initAppData();
 
     void excludeOthers();
+
+    bool validWindow(HWND hWnd);
 };
 
 

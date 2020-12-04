@@ -181,6 +181,16 @@ By default, the buffer is flushed on `<RCtrl>`, which acts as winDozer's flavor 
 
 ---
 
+**Invalid Windows**
+
+winDozer will discard attempts to Move or set a Window ID on the following windows:
+
+- The start menu
+- The system tray
+- The desktop itself
+
+---
+
 **Known bugs**:
 - MSI Afterburner & children (which installs a few hooks of its own) ignores the `WH_KEYBOARD_LL` hook.
 

@@ -155,11 +155,14 @@ void WinDozer::focusWindow(std::string winID) {
 
 void WinDozer::moveFocusedWindow(std::string rectID) {
     if (!rectMap.count(rectID)) {
-        std::cout << "No registered rects found for Rect ID: " << rectID << "\n";
+        std::cout << "No registered rects found for Rect ID: "
+            << rectID << "\n";
         return;
     }
 
     HWND hActvWnd = GetForegroundWindow();
+    if (!validWindow(hActvWnd)) return;
+
     MoveWindow(
         // Window Handle:
         hActvWnd,
@@ -197,6 +200,8 @@ void WinDozer::moveWindow(std::string winID, std::string rectID) {
 
 void WinDozer::setWinID(std::string winID) {
     HWND hActvWnd = GetForegroundWindow();
+    if (!validWindow(hActvWnd)) return;
+
     winMap[winID] = hActvWnd;
     std::cout << "SET Window ID " << winID << "\n\n";
 }
@@ -407,4 +412,23 @@ void WinDozer::excludeOthers() {
     if (hFile == INVALID_HANDLE_VALUE) {
         exit(0);
     }
+}
+
+
+bool WinDozer::validWindow(HWND hWnd) {
+    char classBuffer[MAX_PATH];
+    GetClassNameA(hWnd, classBuffer, sizeof(classBuffer));
+    std::string className = classBuffer;
+
+    if (
+        className == "Windows.UI.Core.CoreWindow" || // The start menu
+        className == "Shell_TrayWnd" || // The system tray
+        className == "Progman" || // The desktop itself / child context menu
+        className == "Program Manager" // The desktop itself / child context menu
+    ) {
+        std::cout << "Invalid Window Class: " << className << "\n";
+        return false;
+    }
+
+    return true;
 }
