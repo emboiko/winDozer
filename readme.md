@@ -185,5 +185,4 @@ By default, the buffer is flushed on `<RCtrl>`, which acts as winDozer's flavor 
 - MSI Afterburner & children (which installs a few hooks of its own) ignores the `WH_KEYBOARD_LL` hook.
 
 **Todo**:
-- Class(es) / Structure(s) / OOP
-- Qt GUI
+- Qt

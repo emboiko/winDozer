@@ -1,5 +1,6 @@
 g++ ^
 .\src\main.cpp ^
+.\src\WinDozer.cpp ^
 -Wall ^
 -static-libgcc ^
 -static-libstdc++ ^
