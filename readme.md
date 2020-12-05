@@ -52,10 +52,12 @@ In the event that the buffer is evaluated containing multiple valid "words", win
 3. Move This
 4. Set Rect ID
 5. Set Window ID
-6. Focus Window
-7. Get Rects
-8. Get Windows
-9. Help
+6. Delete Rect ID
+7. Delete Window ID
+8. Focus Window
+9. Get Rects
+10. Get Windows
+11. Help
 
 
 **Syntax detail**
@@ -67,32 +69,62 @@ Move Window by it's Window ID to the rect described by a Rect ID
 | M | W | {Win ID} | {Rect ID} |
 |---|---|----------|-----------|
 
+`MW5R10`
+
 ---
 
 - Move This
 
-Move This [window] to Rect
+Move This [window] to Rect {Rect ID}
 
 | M | T | R | {Rect ID} |
 |---|---|---|-----------|
+
+`MTR1`
 
 ---
 
 - Set Rect ID
 
-Set Rect ID to geometry of focused window
+Set Rect ID to geometry of focused window. Rect IDs are persisted to the disk between instances of winDozer.
 
 | S | R | {Rect ID} |
 |---|---|-----------|
+
+`SR99`
 
 ---
 
 - Set Window ID
 
-Set the Window ID of the focused window.
+Set the Window ID of the focused window. Window IDs are not persisted to the disk and currently must be set for an individual instance of winDozer. 
 
 | S | W | {Win ID} |
 |---|---|----------|
+
+`SW5`
+
+---
+
+- Delete Rect ID
+
+Unregister a Rect ID. (Deleting `$APPDATA/winDozer/settings.txt` between instances of winDozer will unregister *every* Rect ID)
+
+| D | R | {Rect ID} |
+|---|---|-----------|
+
+`DR99`
+
+---
+
+- Delete Window ID
+
+Unregister a Window ID. (Restarting winDozer will unregister *every* Window ID)
+
+| D | W | {Win ID} |
+|---|---|----------|
+
+`DW5`
 
 ---
 
@@ -102,6 +134,8 @@ Focus window by its assigned {Win ID}
 
 | F | W | {win ID} |
 |---|---| ---------|
+
+`FW5`
 
 ---
 
@@ -125,6 +159,8 @@ Right coordinate
 | G | R |
 |---|---|
 
+`GR`
+
 ---
 
 - Get Windows
@@ -134,22 +170,29 @@ Print Window IDs & an associated title, if one can be gleaned from the window ha
 | G | W |
 |---|---|
 
+`GW`
 
 ---
 
 - Help
 
+Print a simple help dialog to stdout
+
 | H | E | L | P |
 |---|---|---|---|
+
+`HELP`
 
 ---
 
 - Flush
 
-Manually flush the internal buffer
+Manually flush the internal buffer, for use with `dbf`
 
 | F | L | U | S | H |
 |---|---|---|---|---|
+
+`FLUSH`
 
 ---
 
@@ -192,7 +235,11 @@ winDozer will discard attempts to Move or set a Window ID on the following windo
 ---
 
 **Known bugs**:
-- MSI Afterburner & children (which installs a few hooks of its own) ignores the `WH_KEYBOARD_LL` hook.
+- Programs that winDozer cannot doze:
+    - MSI Afterburner & children
+    - Task Manager
+
 
 **Todo**:
-- Qt
+- A Qt GUI sometime soon
+- Parse syntax without [doing so much of this](https://www.youtube.com/watch?v=poz6W0znOfk) and implement [something more robust](https://en.wikipedia.org/wiki/Interpreter_pattern)

@@ -31,8 +31,10 @@ void WinDozer::printHelp() {
         << ("\n")
         << ("Syntax:\n\n")
         << ("\tSR{Rect ID}\t\t\t Set Rect ID\n")
-        << ("\tMTR{Rect ID}\t\t\t Move This [window] to Rect\n")
         << ("\tSW{Window ID}\t\t\t Set Window ID\n")
+        << ("\tDR{Rect ID}\t\t\t Delete Rect ID\n")
+        << ("\tDW{Window ID}\t\t\t Delete Window ID\n")
+        << ("\tMTR{Rect ID}\t\t\t Move This [window] to Rect\n")
         << ("\tMW{Window ID}R{Rect ID}\t\t Move Window to Rect\n")
         << ("\tFW{Window ID}\t\t\t Focus registered Window by ID\n")
         << ("\tGR\t\t\t\t Get/Print all registered Rects\n")
@@ -83,6 +85,8 @@ void WinDozer::setRectID(std::string rectID) {
 
     RECT winRect;
     HWND hActvWnd = GetForegroundWindow();
+    if (!validWindow(hActvWnd)) return;
+
     GetWindowRect(hActvWnd, &winRect);
 
     rect.push_back(winRect.left);
@@ -96,13 +100,24 @@ void WinDozer::setRectID(std::string rectID) {
 }
 
 
+void WinDozer::deleteRectID(std::string rectID) {
+    if (!rectMap.erase(rectID)) {
+        std::cout << "No registered rects found for Rect ID: "
+            << rectID << "\n";
+    }
+    else {
+        std::cout << "DELETE RectID " << rectID << "\n\n";
+    };
+}
+
+
 void WinDozer::printRectIDs(int outMode = STDOUT, std::string path = "") {
     if (rectMap.empty()) {
         std::cout << "No registered Rect ID(s) found\n";
         return;
     }
 
-    if (outMode == FILE) freopen(path.c_str(), "w", stdout);
+    if (outMode == FILE) freopen(path.c_str(), "w+", stdout);
 
     for (auto it = rectMap.begin(); it != rectMap.end(); it++) {
         std::string rectID = it->first;
@@ -187,6 +202,7 @@ void WinDozer::moveWindow(std::string winID, std::string rectID) {
         return;
     }
 
+    //todo: guard this against a garbage handle
     MoveWindow(
         winMap[winID],
         rectMap[rectID][0],
@@ -204,6 +220,17 @@ void WinDozer::setWinID(std::string winID) {
 
     winMap[winID] = hActvWnd;
     std::cout << "SET Window ID " << winID << "\n\n";
+}
+
+
+void WinDozer::deleteWinID(std::string winID) {
+    if (!winMap.erase(winID)) {
+        std::cout << "No registered windows found for Window ID: "
+            << winID << "\n";
+    }
+    else {
+        std::cout << "DELETE Window ID: " << winID << "\n\n";
+    };
 }
 
 
@@ -237,9 +264,11 @@ void WinDozer::readBuffer() {
     std::regex reMoveWin{ "(M){1}(T|W\\d+){1}(R\\d+){1}" };
     std::regex reSetRect{ "(SR){1}(\\d+){1}" };
     std::regex reSetWin{ "(SW){1}(\\d+){1}" };
+    std::regex reDelRect{ "(DR){1}(\\d+){1}" };
+    std::regex reDelWin{ "(DW){1}(\\d+){1}" };
     std::regex reFocusWin{ "(FW){1}(\\d+){1}" };
     //matches
-    std::regex reGetRect{ "(\\w|\\d)*(GR)" };
+    std::regex reGetRects{ "(\\w|\\d)*(GR)" };
     std::regex reGetWins{ "(\\w|\\d)*(GW)" };
     std::regex reFlush{ "(\\d|\\w)*(FLUSH)" };
     std::regex reHelp{ "(\\d|\\w)*(HELP)" };
@@ -252,25 +281,14 @@ void WinDozer::readBuffer() {
         match = m.str();
         if (verbose) std::cout << match << "\n";
 
-        // Work backwards over the input
-        int i = match.length() - 1;
+        //Start at the back
+        int i = getSuffixID(match, rectID);
 
-        while (isdigit(match[i])) {
-            rectID.insert(0, 1, match[i]);
-            i--;
-        }
-
-        //Move over the (R)ect flag:
+        //Move over the (R)ect flag
         i--;
-
-        // Get the window # if one exists:
+        // Get the (W)indow # if one exists:
         if (isdigit(match[i])) {
-            while (isdigit(match[i])) {
-                winID.insert(0, 1, match[i]);
-                i--;
-            }
-            //Move over the (W) flag:
-            i--;
+            getSuffixID(match, winID, i);
             moveWindow(winID, rectID);
         }
         //Otherwise, it's the focused window:
@@ -281,46 +299,51 @@ void WinDozer::readBuffer() {
 
     else if (std::regex_search(inBuff, m, reSetRect)) {
         match = m.str();
-
-        int i = match.length() - 1;
-        while (isdigit(match[i])) {
-            rectID.insert(0, 1, match[i]);
-            i--;
-        }
+        if (verbose) std::cout << match << "\n";
+        getSuffixID(match, rectID);
         setRectID(rectID);
     }
 
     else if (std::regex_search(inBuff, m, reSetWin)) {
         match = m.str();
-
-        int i = match.length() - 1;
-        while (isdigit(match[i])) {
-            winID.insert(0, 1, match[i]);
-            i--;
-        }
+        if (verbose) std::cout << match << "\n";
+        getSuffixID(match, winID);
         setWinID(winID);
+    }
+
+    else if (std::regex_search(inBuff, m, reDelRect)) {
+        match = m.str();
+        if (verbose) std::cout << match << "\n";
+        getSuffixID(match, rectID);
+        deleteRectID(rectID);
+    }
+
+    else if (std::regex_search(inBuff, m, reDelWin)) {
+        match = m.str();
+        if (verbose) std::cout << match << "\n";
+        getSuffixID(match, winID);
+        deleteWinID(winID);
     }
 
     else if (std::regex_search(inBuff, m, reFocusWin)) {
         match = m.str();
-
-        int i = match.length() - 1;
-        while (isdigit(match[i])) {
-            winID.insert(0, 1, match[i]);
-            i--;
-        }
+        if (verbose) std::cout << match << "\n";
+        getSuffixID(match, winID);
         focusWindow(winID);
     }
 
-    else if (std::regex_match(inBuff, reGetRect)) {
+    else if (std::regex_match(inBuff, reGetRects)) {
+        if (verbose) std::cout << match << "\n";
         printRectIDs();
     }
 
     else if (std::regex_match(inBuff, reGetWins)) {
+        if (verbose) std::cout << match << "\n";
         printWinIDs();
     }
 
     else if (std::regex_match(inBuff, reHelp)) {
+        if (verbose) std::cout << match << "\n";
         printHelp();
     }
 
@@ -420,6 +443,8 @@ bool WinDozer::validWindow(HWND hWnd) {
     GetClassNameA(hWnd, classBuffer, sizeof(classBuffer));
     std::string className = classBuffer;
 
+    if (verbose) { std::cout << "Window class: " << className << "\n"; }
+
     if (
         className == "Windows.UI.Core.CoreWindow" || // The start menu
         className == "Shell_TrayWnd" || // The system tray
@@ -431,4 +456,22 @@ bool WinDozer::validWindow(HWND hWnd) {
     }
 
     return true;
+}
+
+
+int WinDozer::getSuffixID(std::string match, std::string& idString) {
+    int i = match.length() - 1;
+    while (isdigit(match[i])) {
+        idString.insert(0, 1, match[i]);
+        i--;
+    }
+    return i;
+}
+
+int WinDozer::getSuffixID(std::string match, std::string& idString, int i) {
+    while (isdigit(match[i])) {
+        idString.insert(0, 1, match[i]);
+        i--;
+    }
+    return i;
 }

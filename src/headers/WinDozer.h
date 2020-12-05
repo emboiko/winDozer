@@ -39,6 +39,8 @@ struct WinDozer {
 
     void setRectID(std::string rectID);
 
+    void deleteRectID(std::string rectID);
+
     void printRectIDs(int outMode, std::string path);
 
     void printWinIDs();
@@ -50,6 +52,8 @@ struct WinDozer {
     void moveWindow(std::string winID, std::string rectID);
 
     void setWinID(std::string winID);
+
+    void deleteWinID(std::string winID);
 
     void shiftBuffer(char inChar);
 
@@ -66,6 +70,10 @@ struct WinDozer {
     void initAppData();
 
     void excludeOthers();
+
+    int getSuffixID(std::string match, std::string& idString);
+
+    int getSuffixID(std::string match, std::string& idString, int i);
 
     bool validWindow(HWND hWnd);
 };
