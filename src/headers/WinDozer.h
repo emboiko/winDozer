@@ -45,6 +45,8 @@ struct WinDozer {
 
     void printWinIDs();
 
+    void unFlashWindow(std::string winID);
+
     void focusWindow(std::string winID);
 
     void moveFocusedWindow(std::string rectID);

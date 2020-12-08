@@ -42,7 +42,6 @@ void WinDozer::printHelp() {
         << ("\tFLUSH\t\t\t\t Flush Buffer\n")
         << ("\tHELP\t\t\t\t Print this dialog\n")
         << ("\n");
-    ;
 }
 
 
@@ -148,16 +147,7 @@ void WinDozer::printWinIDs() {
 }
 
 
-void WinDozer::focusWindow(std::string winID) {
-    if (!winMap.count(winID)) {
-        std::cout << "No registered windows found for Window ID: "
-            << winID << "\n";
-        return;
-    }
-    ShowWindow(winMap[winID], SW_RESTORE); //Restore the window if it's minimized
-    SwitchToThisWindow(winMap[winID], FALSE); //Focus the window
-
-    // Remove the flash
+void WinDozer::unFlashWindow(std::string winID) {
     FLASHWINFO flashInfo;
     flashInfo.cbSize = sizeof(FLASHWINFO);
     flashInfo.hwnd = winMap[winID];
@@ -165,6 +155,19 @@ void WinDozer::focusWindow(std::string winID) {
     flashInfo.uCount = 0;
     flashInfo.dwTimeout = 0;
     FlashWindowEx(&flashInfo);
+}
+
+
+void WinDozer::focusWindow(std::string winID) {
+    if (!winMap.count(winID)) {
+        std::cout << "No registered windows found for Window ID: "
+            << winID << "\n";
+        return;
+    }
+
+    ShowWindow(winMap[winID], SW_RESTORE); //Restore the window if neccesary
+    SwitchToThisWindow(winMap[winID], FALSE); //Focus the window
+    unFlashWindow(winID); // Remove the flash from SwitchToThisWindow()
 }
 
 
@@ -202,7 +205,7 @@ void WinDozer::moveWindow(std::string winID, std::string rectID) {
         return;
     }
 
-    //todo: guard this against a garbage handle
+    ShowWindow(winMap[winID], SW_RESTORE); //Restore the window if neccesary
     MoveWindow(
         winMap[winID],
         rectMap[rectID][0],
