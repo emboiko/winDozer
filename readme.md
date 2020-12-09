@@ -238,9 +238,9 @@ winDozer will discard attempts to Move or set a Window ID on the following windo
 - Programs that winDozer cannot doze:
     - MSI Afterburner & children
     - Task Manager
+    - Just about anything that installs a prior hook and doesn't go on to return a call to `CallNextHookEx()`.
 
 
 **Todo**:
 - A Qt GUI sometime soon
 - Parse syntax without [doing so much of this](https://www.youtube.com/watch?v=poz6W0znOfk) and implement [something more robust](https://en.wikipedia.org/wiki/Interpreter_pattern)
-- Garbage window handles

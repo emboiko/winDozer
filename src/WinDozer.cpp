@@ -441,6 +441,25 @@ void WinDozer::excludeOthers() {
 }
 
 
+int WinDozer::getSuffixID(std::string match, std::string& idString) {
+    int i = match.length() - 1;
+    while (isdigit(match[i])) {
+        idString.insert(0, 1, match[i]);
+        i--;
+    }
+    return i;
+}
+
+
+int WinDozer::getSuffixID(std::string match, std::string& idString, int i) {
+    while (isdigit(match[i])) {
+        idString.insert(0, 1, match[i]);
+        i--;
+    }
+    return i;
+}
+
+
 bool WinDozer::validWindow(HWND hWnd) {
     char classBuffer[MAX_PATH];
     GetClassNameA(hWnd, classBuffer, sizeof(classBuffer));
@@ -462,19 +481,14 @@ bool WinDozer::validWindow(HWND hWnd) {
 }
 
 
-int WinDozer::getSuffixID(std::string match, std::string& idString) {
-    int i = match.length() - 1;
-    while (isdigit(match[i])) {
-        idString.insert(0, 1, match[i]);
-        i--;
-    }
-    return i;
-}
+std::string WinDozer::registered(HWND hWnd) {
+    if (winMap.empty()) return "";
 
-int WinDozer::getSuffixID(std::string match, std::string& idString, int i) {
-    while (isdigit(match[i])) {
-        idString.insert(0, 1, match[i]);
-        i--;
+    std::string winID;
+    for (auto it = winMap.begin(); it != winMap.end(); it++) {
+        winID = it->first;
+        if (winMap[winID] == hWnd) return winID;
     }
-    return i;
+
+    return "";
 }

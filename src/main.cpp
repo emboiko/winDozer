@@ -6,7 +6,7 @@
 WinDozer winDozer;
 
 
-LRESULT CALLBACK hookProc(int code, WPARAM wParam, LPARAM lParam) {
+LRESULT CALLBACK kbdHookProc(int code, WPARAM wParam, LPARAM lParam) {
     if (code >= 0) {
         if (wParam == WM_KEYDOWN) {
             winDozer.kbdStruct = *((KBDLLHOOKSTRUCT*)lParam);
@@ -17,18 +17,37 @@ LRESULT CALLBACK hookProc(int code, WPARAM wParam, LPARAM lParam) {
 }
 
 
+void CALLBACK winEventProc(
+    HWINEVENTHOOK hWinEventHook,
+    DWORD event,
+    HWND hwnd,
+    LONG idObject,
+    LONG idChild,
+    DWORD idEventThread,
+    DWORD dwmsEventTime
+) {
+    std::string winID;
+
+    if ((event == EVENT_OBJECT_DESTROY) && (idObject == OBJID_WINDOW)) {
+        winID = winDozer.registered(hwnd);
+        if (!winID.empty()) winDozer.deleteWinID(winID);
+    }
+}
+
+
 void exitHandler(int SIG) {
     winDozer.printRectIDs(WinDozer::FILE, winDozer.settings);
-    UnhookWindowsHookEx(winDozer.hHook);
+    UnhookWindowsHookEx(winDozer.hKbdHook);
+    UnhookWinEvent(winDozer.hWinEventHook);
     exit(SIG);
 }
 
 
 int main(int argc, char* argv[]) {
     if (
-        (winDozer.hHook = SetWindowsHookExA(
+        (winDozer.hKbdHook = SetWindowsHookExA(
             WH_KEYBOARD_LL,
-            hookProc,
+            kbdHookProc,
             // In the win32api docs:
             // The hMod parameter must be set to NULL if the dwThreadId parameter specifies
             // a thread created by the current process and if the hook procedure is within 
@@ -38,6 +57,17 @@ int main(int argc, char* argv[]) {
             // if this parameter is zero, the hook procedure is associated with all 
             // existing threads running in the same desktop as the calling thread
             0))
+        &&
+        // Doing this with SetWindowsHookEx() is a circus and requires dll injection
+        (winDozer.hWinEventHook = SetWinEventHook(
+            EVENT_OBJECT_DESTROY,
+            EVENT_OBJECT_DESTROY,
+            NULL, // No DLL containing the callback
+            winEventProc,
+            0, // receive events from all processes on the current desktop.
+            0, // all existing threads on the current desktop
+            WINEVENT_OUTOFCONTEXT // No DLL
+        ))
         ) {
         winDozer.initAppData();
         winDozer.excludeOthers();
@@ -51,8 +81,10 @@ int main(int argc, char* argv[]) {
         while (GetMessageW(msg, NULL, 0, 0)) {} // Hold the terminal open
     }
     else {
-        std::cerr << (stderr, "Hook failed to set. ");
-        std::cerr << (stderr, "Press <Enter> to exit.\n");
+        std::cerr << "Hook failed to set. (Error "
+            << GetLastError() << ")\n"
+            << "Press <Enter> to exit.\n";
+
         getchar();
     }
     return 0;

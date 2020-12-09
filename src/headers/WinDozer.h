@@ -13,7 +13,8 @@
 
 struct WinDozer {
     KBDLLHOOKSTRUCT kbdStruct;
-    HHOOK hHook;
+    HHOOK hKbdHook;
+    HWINEVENTHOOK hWinEventHook;
 
     static const short STDOUT{ 0 };
     static const short FILE{ 1 };
@@ -78,6 +79,8 @@ struct WinDozer {
     int getSuffixID(std::string match, std::string& idString, int i);
 
     bool validWindow(HWND hWnd);
+
+    std::string registered(HWND hWnd);
 };
 
 
