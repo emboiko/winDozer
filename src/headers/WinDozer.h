@@ -40,7 +40,7 @@ struct WinDozer {
 
     void setRectID(std::string rectID);
 
-    void deleteRectID(std::string rectID);
+    void eraseRectID(std::string rectID);
 
     void printRectIDs(int outMode, std::string path);
 
@@ -56,7 +56,7 @@ struct WinDozer {
 
     void setWinID(std::string winID);
 
-    void deleteWinID(std::string winID);
+    void eraseWinID(std::string winID);
 
     void shiftBuffer(char inChar);
 

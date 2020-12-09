@@ -30,7 +30,7 @@ void CALLBACK winEventProc(
 
     if ((event == EVENT_OBJECT_DESTROY) && (idObject == OBJID_WINDOW)) {
         winID = winDozer.registered(hwnd);
-        if (!winID.empty()) winDozer.deleteWinID(winID);
+        if (!winID.empty()) winDozer.eraseWinID(winID);
     }
 }
 

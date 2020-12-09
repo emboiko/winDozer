@@ -52,8 +52,8 @@ In the event that the buffer is evaluated containing multiple valid "words", win
 3. Move This
 4. Set Rect ID
 5. Set Window ID
-6. Delete Rect ID
-7. Delete Window ID
+6. Erase Rect ID
+7. Erase Window ID
 8. Focus Window
 9. Get Rects
 10. Get Windows
@@ -106,25 +106,25 @@ Set the Window ID of the focused window. Window IDs are not persisted to the dis
 
 ---
 
-- Delete Rect ID
+- Erase Rect ID
 
 Unregister a Rect ID. (Deleting `$APPDATA/winDozer/settings.txt` between instances of winDozer will unregister *every* Rect ID)
 
 | D | R | {Rect ID} |
 |---|---|-----------|
 
-`DR99`
+`ER99`
 
 ---
 
-- Delete Window ID
+- Erase Window ID
 
-Unregister a Window ID. (Restarting winDozer will unregister *every* Window ID)
+Unregister a Window ID. (Restarting winDozer will unregister *every* Window ID) Closing a window will automatically unregister it. 
 
 | D | W | {Win ID} |
 |---|---|----------|
 
-`DW5`
+`EW5`
 
 ---
 
@@ -244,3 +244,4 @@ winDozer will discard attempts to Move or set a Window ID on the following windo
 **Todo**:
 - A Qt GUI sometime soon
 - Parse syntax without [doing so much of this](https://www.youtube.com/watch?v=poz6W0znOfk) and implement [something more robust](https://en.wikipedia.org/wiki/Interpreter_pattern)
+- Inconsistent behavior in FocusWindow()

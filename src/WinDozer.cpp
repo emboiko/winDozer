@@ -32,8 +32,8 @@ void WinDozer::printHelp() {
         << ("Syntax:\n\n")
         << ("\tSR{Rect ID}\t\t\t Set Rect ID\n")
         << ("\tSW{Window ID}\t\t\t Set Window ID\n")
-        << ("\tDR{Rect ID}\t\t\t Delete Rect ID\n")
-        << ("\tDW{Window ID}\t\t\t Delete Window ID\n")
+        << ("\tER{Rect ID}\t\t\t Erase Rect ID\n")
+        << ("\tEW{Window ID}\t\t\t Erase Window ID\n")
         << ("\tMTR{Rect ID}\t\t\t Move This [window] to Rect\n")
         << ("\tMW{Window ID}R{Rect ID}\t\t Move Window to Rect\n")
         << ("\tFW{Window ID}\t\t\t Focus registered Window by ID\n")
@@ -99,13 +99,13 @@ void WinDozer::setRectID(std::string rectID) {
 }
 
 
-void WinDozer::deleteRectID(std::string rectID) {
+void WinDozer::eraseRectID(std::string rectID) {
     if (!rectMap.erase(rectID)) {
         std::cout << "No registered rects found for Rect ID: "
             << rectID << "\n";
     }
     else {
-        std::cout << "DELETE RectID " << rectID << "\n\n";
+        std::cout << "ERASE RectID " << rectID << "\n\n";
     };
 }
 
@@ -165,9 +165,15 @@ void WinDozer::focusWindow(std::string winID) {
         return;
     }
 
-    ShowWindow(winMap[winID], SW_RESTORE); //Restore the window if neccesary
+    // Still not working, still determined to make one of the 20 API functions
+    // that claim to *activate* a window actually do so. For now, this method
+    // would be better off named restoreWindowIfMinimized() because that's about
+    // all it's doing currently. 
+
+    //Restore the window if neccesary
+    if (IsIconic(winMap[winID])) ShowWindow(winMap[winID], SW_RESTORE);
     SwitchToThisWindow(winMap[winID], FALSE); //Focus the window
-    unFlashWindow(winID); // Remove the flash from SwitchToThisWindow()
+    unFlashWindow(winID); // Remove the flash
 }
 
 
@@ -205,7 +211,7 @@ void WinDozer::moveWindow(std::string winID, std::string rectID) {
         return;
     }
 
-    ShowWindow(winMap[winID], SW_RESTORE); //Restore the window if neccesary
+    if (IsIconic(winMap[winID])) ShowWindow(winMap[winID], SW_RESTORE);
     MoveWindow(
         winMap[winID],
         rectMap[rectID][0],
@@ -226,13 +232,13 @@ void WinDozer::setWinID(std::string winID) {
 }
 
 
-void WinDozer::deleteWinID(std::string winID) {
+void WinDozer::eraseWinID(std::string winID) {
     if (!winMap.erase(winID)) {
         std::cout << "No registered windows found for Window ID: "
             << winID << "\n";
     }
     else {
-        std::cout << "DELETE Window ID: " << winID << "\n\n";
+        std::cout << "ERASE Window ID: " << winID << "\n\n";
     };
 }
 
@@ -267,8 +273,8 @@ void WinDozer::readBuffer() {
     std::regex reMoveWin{ "(M){1}(T|W\\d+){1}(R\\d+){1}" };
     std::regex reSetRect{ "(SR){1}(\\d+){1}" };
     std::regex reSetWin{ "(SW){1}(\\d+){1}" };
-    std::regex reDelRect{ "(DR){1}(\\d+){1}" };
-    std::regex reDelWin{ "(DW){1}(\\d+){1}" };
+    std::regex reEraseRect{ "(ER){1}(\\d+){1}" };
+    std::regex reEraseWin{ "(EW){1}(\\d+){1}" };
     std::regex reFocusWin{ "(FW){1}(\\d+){1}" };
     //matches
     std::regex reGetRects{ "(\\w|\\d)*(GR)" };
@@ -314,18 +320,18 @@ void WinDozer::readBuffer() {
         setWinID(winID);
     }
 
-    else if (std::regex_search(inBuff, m, reDelRect)) {
+    else if (std::regex_search(inBuff, m, reEraseRect)) {
         match = m.str();
         if (verbose) std::cout << match << "\n";
         getSuffixID(match, rectID);
-        deleteRectID(rectID);
+        eraseRectID(rectID);
     }
 
-    else if (std::regex_search(inBuff, m, reDelWin)) {
+    else if (std::regex_search(inBuff, m, reEraseWin)) {
         match = m.str();
         if (verbose) std::cout << match << "\n";
         getSuffixID(match, winID);
-        deleteWinID(winID);
+        eraseWinID(winID);
     }
 
     else if (std::regex_search(inBuff, m, reFocusWin)) {
