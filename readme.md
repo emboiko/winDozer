@@ -220,7 +220,7 @@ This flag is intended for development, and in most cases will flood stdout as th
 
 Currently, winDozer's internal syntax buffer is implemented as a character array of length 7. This size is partially arbitrary, and may grow in size or undergo different implementations as the application is developed. The buffer is populated by continuously shifting in the latest *valid* `keydown` caught from a `WH_KEYBOARD_LL` hook, which is set and unhooked each time the application runs. 
 
-By default, the buffer is flushed on `<RCtrl>`, which acts as winDozer's flavor of `<Enter>`. This is configurable in `config.h`.
+By default, the buffer is flushed on `<RCtrl>`, which acts as winDozer's flavor of `<Enter>`. 
 
 ---
 
@@ -234,6 +234,12 @@ winDozer will discard attempts to Move or set a Window ID on the following windo
 
 ---
 
+**Deliberately unimplemented behavior**
+
+Windows GUI has plenty of hotkeys and macros for power users such as `alt+tab`, `win+tab`, `win+shift+M`, and `win+<arrow>`. winDozer doesn't try to wrap behavior that is already made convienient in Windows. There is no syntax, for example, to minimize the focused window because there is already an *equally fast* and *prexisting way* to do the exact same thing.
+
+---
+
 **Known bugs**:
 - Programs that winDozer cannot doze:
     - MSI Afterburner & children
@@ -242,6 +248,4 @@ winDozer will discard attempts to Move or set a Window ID on the following windo
 
 
 **Todo**:
-- A Qt GUI sometime soon
 - Parse syntax without [doing so much of this](https://www.youtube.com/watch?v=poz6W0znOfk) and implement [something more robust](https://en.wikipedia.org/wiki/Interpreter_pattern)
-- Inconsistent behavior in FocusWindow()

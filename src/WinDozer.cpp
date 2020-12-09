@@ -147,17 +147,6 @@ void WinDozer::printWinIDs() {
 }
 
 
-void WinDozer::unFlashWindow(std::string winID) {
-    FLASHWINFO flashInfo;
-    flashInfo.cbSize = sizeof(FLASHWINFO);
-    flashInfo.hwnd = winMap[winID];
-    flashInfo.dwFlags = FLASHW_STOP;
-    flashInfo.uCount = 0;
-    flashInfo.dwTimeout = 0;
-    FlashWindowEx(&flashInfo);
-}
-
-
 void WinDozer::focusWindow(std::string winID) {
     if (!winMap.count(winID)) {
         std::cout << "No registered windows found for Window ID: "
@@ -165,15 +154,12 @@ void WinDozer::focusWindow(std::string winID) {
         return;
     }
 
-    // Still not working, still determined to make one of the 20 API functions
-    // that claim to *activate* a window actually do so. For now, this method
-    // would be better off named restoreWindowIfMinimized() because that's about
-    // all it's doing currently. 
-
-    //Restore the window if neccesary
+    // Restore the window if neccesary:
     if (IsIconic(winMap[winID])) ShowWindow(winMap[winID], SW_RESTORE);
-    SwitchToThisWindow(winMap[winID], FALSE); //Focus the window
-    unFlashWindow(winID); // Remove the flash
+    // Perform a magic ritual to please the Windows Gods:
+    keybd_event(0, 0, 0, 0);
+    // Focus the window:
+    SetForegroundWindow(winMap[winID]);
 }
 
 
