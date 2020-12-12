@@ -173,8 +173,8 @@ void WinDozer::moveFocusedWindow(std::string rectID) {
     HWND hActvWnd = GetForegroundWindow();
     if (!validWindow(hActvWnd)) return;
 
+    ShowWindow(hActvWnd, SW_RESTORE); // Window won't move if it's maximized
     MoveWindow(
-        // Window Handle:
         hActvWnd,
         // X:
         rectMap[rectID][0],
@@ -197,7 +197,7 @@ void WinDozer::moveWindow(std::string winID, std::string rectID) {
         return;
     }
 
-    if (IsIconic(winMap[winID])) ShowWindow(winMap[winID], SW_RESTORE);
+    ShowWindow(winMap[winID], SW_RESTORE); // Restore the window if it's minimized
     MoveWindow(
         winMap[winID],
         rectMap[rectID][0],
