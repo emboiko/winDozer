@@ -42,7 +42,7 @@ Keystrokes considered *valid*:
 - A-Z
 - Numrow 0-9
 - Numpad 0-9
-- Fn 1-9
+- Fn 1-9 (Same as numrow & numpad)
 
 In the event that the buffer is evaluated containing multiple valid "words", winDozer will choose one in the following precedence:
 ###### (buffer conflicts should be rare but are certainly possible.)
@@ -248,4 +248,8 @@ Windows GUI has plenty of hotkeys and macros for power users such as `alt+tab`, 
 
 
 **Todo**:
-- Parse syntax without [doing so much of this](https://www.youtube.com/watch?v=poz6W0znOfk) and implement [something more robust](https://en.wikipedia.org/wiki/Interpreter_pattern)
+- Parse syntax without [doing so much of this](https://www.youtube.com/watch?v=poz6W0znOfk) and implement [something more robust](https://en.wikipedia.org/wiki/Interpreter_pattern). 
+- Query `ImmersiveShell` for instance of `IVirtualDesktopManagerInternal` and implement those undocumented methods in winDozer. These features are subject to break between Windows builds and will probably warrant an `experimental` command line flag. It would be nice to be able to (C)hange [view to] (D)esktop {desktopID}, among other possibilities.
+- (A)djust window rect size, (A)djust window rect position
+- Set a non-default `BUFFSIZE` at runtime.
+- Submitting with `<RCtrl>` should be configurable.

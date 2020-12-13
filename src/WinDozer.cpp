@@ -163,7 +163,7 @@ void WinDozer::focusWindow(std::string winID) {
 }
 
 
-void WinDozer::moveFocusedWindow(std::string rectID) {
+void WinDozer::moveWindow(std::string rectID) {
     if (!rectMap.count(rectID)) {
         std::cout << "No registered rects found for Rect ID: "
             << rectID << "\n";
@@ -194,6 +194,11 @@ void WinDozer::moveWindow(std::string winID, std::string rectID) {
     if (!winMap.count(winID)) {
         std::cout << "No registered windows found for Window ID: "
             << winID << "\n";
+        return;
+    }
+    if (!rectMap.count(rectID)) {
+        std::cout << "No registered rects found for Rect ID: "
+            << rectID << "\n";
         return;
     }
 
@@ -288,7 +293,7 @@ void WinDozer::readBuffer() {
         }
         //Otherwise, it's the focused window:
         else {
-            moveFocusedWindow(rectID);
+            moveWindow(rectID);
         }
     }
 
