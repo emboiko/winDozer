@@ -32,6 +32,7 @@ struct WinDozer {
     bool verbose;
     bool debugBuffer;
 
+    bool adjustBorder;
     bool adjusting;
     HWND hAdjustedWindow;
 
@@ -51,7 +52,7 @@ struct WinDozer {
 
     void printWinIDs();
 
-    void enterAdjustWindow(std::string winID);
+    void enterAdjustWindow(std::string winID, bool border);
 
     void adjustWindow(DWORD vkCode);
 

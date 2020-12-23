@@ -37,11 +37,13 @@ void WinDozer::printHelp() {
         << ("\tEW{Window ID}\t\t\t Erase Window ID\n")
         << ("\tMTR{Rect ID}\t\t\t Move This [window] to Rect\n")
         << ("\tMW{Window ID}R{Rect ID}\t\t Move Window to Rect\n")
-        << ("\tFW{Window ID}\t\t\t Focus registered Window by ID\n")
+        << ("\tFW{Window ID}\t\t\t Focus Window by ID\n")
         << ("\tAW{Window ID}\t\t\t Adjust Window by ID\n")
+        << ("\tAW{Window ID}B\t\t\t Adjust Window Border by ID\n")
         << ("\tAT\t\t\t\t Adjust This [window]\n")
-        << ("\tGR\t\t\t\t Get/Print all registered Rects\n")
-        << ("\tGW\t\t\t\t Get/Print all registered Windows\n")
+        << ("\tATB\t\t\t\t Adjust This [window's] Border\n")
+        << ("\tGR\t\t\t\t Get/Print all Rects\n")
+        << ("\tGW\t\t\t\t Get/Print all Windows\n")
         << ("\tFLUSH\t\t\t\t Flush Buffer\n")
         << ("\tHELP\t\t\t\t Print this dialog\n")
         << ("\t<RCtrl>\t\t\t\t Submit (default, see flags)\n")
@@ -154,7 +156,7 @@ void WinDozer::printWinIDs() {
 }
 
 
-void WinDozer::enterAdjustWindow(std::string winID) {
+void WinDozer::enterAdjustWindow(std::string winID, bool border) {
     HWND hwnd;
     if (winID.empty()) {
         hwnd = GetForegroundWindow();
@@ -179,12 +181,10 @@ void WinDozer::enterAdjustWindow(std::string winID) {
     }
 
     adjusting = true;
+    border ? adjustBorder = true : false;
     char winText[MAX_PATH];
     GetWindowTextA(hAdjustedWindow, winText, MAX_PATH);
-    char classText[MAX_PATH];
-    GetClassNameA(hAdjustedWindow, classText, sizeof(classText));
-    std::cout << "Entering adjustment: " << classText << "\n"
-        << winText << "\n\n";
+    std::cout << "Entering adjustment:\n" << winText << "\n";
 }
 
 
@@ -197,33 +197,52 @@ void WinDozer::adjustWindow(DWORD vkCode) {
 
     int x = winRect.left;
     int y = winRect.top;
+    int width = winRect.right - winRect.left;
+    int height = winRect.bottom - winRect.top;
+
     switch (vkCode) {
     case 37:
         // Left
         x--;
+        width--;
         break;
     case 38:
         // Up
         y--;
+        height--;
         break;
     case 39:
         // Right
         x++;
+        width++;
         break;
     case 40:
         // Down
         y++;
+        height++;
         break;
     }
 
-    MoveWindow(
-        hAdjustedWindow,
-        x,
-        y,
-        winRect.right - winRect.left,
-        winRect.bottom - winRect.top,
-        true
-    );
+    if (adjustBorder) {
+        MoveWindow(
+            hAdjustedWindow,
+            winRect.left,
+            winRect.top,
+            width,
+            height,
+            true
+        );
+    }
+    else {
+        MoveWindow(
+            hAdjustedWindow,
+            x,
+            y,
+            winRect.right - winRect.left,
+            winRect.bottom - winRect.top,
+            true
+        );
+    }
 }
 
 
@@ -348,6 +367,7 @@ void WinDozer::readBuffer() {
     std::regex reEraseWin{ "(EW){1}(\\d+){1}" };
     std::regex reFocusWin{ "(FW){1}(\\d+){1}" };
     std::regex reAdjustWin{ "(A){1}(T|W\\d+){1}" };
+    std::regex reAdjustWinBorder{ "(A){1}(T|W\\d+){1}(B){1}" };
     //matches
     std::regex reGetRects{ "(\\w|\\d)*(GR)" };
     std::regex reGetWins{ "(\\w|\\d)*(GW)" };
@@ -413,11 +433,18 @@ void WinDozer::readBuffer() {
         focusWindow(winID);
     }
 
+    else if (std::regex_search(inBuff, m, reAdjustWinBorder)) {
+        match = m.str();
+        if (verbose) std::cout << match << "\n";
+        getSuffixID(match, winID, match.length() - 2);
+        enterAdjustWindow(winID, true);
+    }
+
     else if (std::regex_search(inBuff, m, reAdjustWin)) {
         match = m.str();
         if (verbose) std::cout << match << "\n";
         getSuffixID(match, winID);
-        enterAdjustWindow(winID);
+        enterAdjustWindow(winID, false);
     }
 
     else if (std::regex_match(inBuff, reGetRects)) {
@@ -484,6 +511,7 @@ void WinDozer::ingressInput() {
             std::cout << "Exit Adjustment.\n";
             // RCtrl
             adjusting = false;
+            adjustBorder = false;
             hAdjustedWindow = NULL;
             return;
         }

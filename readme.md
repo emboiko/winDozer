@@ -60,10 +60,11 @@ In the event that the buffer is evaluated containing multiple valid "words", win
 5. Erase Rect ID
 6. Erase Window ID
 7. Focus Window
-8. Adjust Window & Adjust This
-9. Get Rects
-10. Get Windows
-11. Help
+8. Adjust Window Border & Adjust This Border
+9. Adjust Window & Adjust This
+10. Get Rects
+11. Get Windows
+12. Help
 
 **Syntax detail**
 
@@ -150,7 +151,7 @@ Focus window by its assigned {Win ID}
 
 *For those of us who are particularly obsessive-compulsive:*
 
-Adjusts the focused window by shifting it 1px at a time. If this syntax is evaluated from the buffer following `<RCtrl>`, input is limited to only the arrow keys until a subsequent `<RCtrl>` is input. 
+Adjusts the focused window by shifting its location 1px at a time. If this syntax is evaluated from the buffer following `<RCtrl>`, input is limited to only the arrow keys until a subsequent `<RCtrl>` is input. 
 
 | A | T |
 |---|---|
@@ -175,9 +176,9 @@ Adjusts the focused window by shifting it 1px at a time. If this syntax is evalu
 
 - Adjust Window
 
-*See `Adjust This` (Above)*
+*See [`Adjust This`](#adjustment)*
 
-Adjusts the window by shifting it 1px at a time. If this syntax is evaluated from the buffer following `<RCtrl>`, input is limited to only the arrow keys until a subsequent `<RCtrl>` is input. This syntax will lift the window if minimized, but will not necessarily focus the window.
+Adjusts the window by shifting its location 1px at a time. If this syntax is evaluated from the buffer following `<RCtrl>`, input is limited to only the arrow keys until a subsequent `<RCtrl>` is input. This syntax will lift the window if minimized, but will not necessarily focus the window.
 
 | A | W | {win ID} |
 |---|---|----------|
@@ -186,6 +187,31 @@ Adjusts the window by shifting it 1px at a time. If this syntax is evaluated fro
 
 ---
 
+- Adjust This [window's] Border
+
+*See [`Adjust This`](#adjustment)*
+
+Resize the focused window by shifting it's right or bottom border 1px at a time. If this syntax is evaluated from the buffer following `<RCtrl>`, input is limited to only the arrow keys until a subsequent `<RCtrl>` is input. 
+
+| A | T | B |
+|---|---|---|
+
+`ATB`
+
+---
+
+- Adjust Window Border
+
+*See [`Adjust This`](#adjustment)*
+
+Resize the window (by ID) by shifting it 1px at a time. If this syntax is evaluated from the buffer following `<RCtrl>`, input is limited to only the arrow keys until a subsequent `<RCtrl>` is input. This syntax will lift the window if minimized, but will not necessarily focus the window.
+
+| A | W | {win ID} | B |
+|---|---|----------|---|
+
+`AW25B`
+
+---
 
 - Get Rects
 
@@ -280,7 +306,7 @@ By default, the buffer is flushed on `<RCtrl>`, which acts as winDozer's flavor 
 
 **Invalid Windows**
 
-winDozer will discard attempts to Move or set a Window ID on the following windows:
+winDozer will discard attempts to Move, Adjust, Resize, or set a Window ID on the following windows:
 
 - The start menu
 - The system tray
