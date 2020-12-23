@@ -35,6 +35,8 @@ struct WinDozer {
     bool adjusting;
     HWND hAdjustedWindow;
 
+    DWORD SUBMIT;
+
     void printFigletWelcome();
 
     void printHelp();
@@ -73,15 +75,15 @@ struct WinDozer {
 
     void ingressInput();
 
-    void initArgs(int argc, char* argv[]);
+    void excludeOthers();
 
     void initAppData();
-
-    void excludeOthers();
 
     int getSuffixID(std::string match, std::string& idString);
 
     int getSuffixID(std::string match, std::string& idString, int i);
+
+    bool initArgs(int argc, char* argv[]);
 
     bool validWindow(HWND hWnd);
 

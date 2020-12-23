@@ -29,7 +29,7 @@ Step 2: A given window is placed somewhere on the desktop. As an example, we can
 
 Step 3: We assign the geometry of the currently focused window to a **Rect ID** by typing directly at the window: `sr{rectID}` followed by `<RCtrl>`
 
-A Rect ID is any integer in range (0,9999). Writing window geometry to a previously assigned ID will overwrite the previous geometry for that ID.
+A Rect ID is any integer in range (0-9999), *although this is not strictly enforced.* Writing window geometry to a previously assigned ID will overwrite the previous geometry for that ID.
 
 Step 4: For this example, let's manually move the window somewhere else on the desktop so we can put it back with winDozer
 
@@ -38,13 +38,15 @@ Step 5: We move the focused window to the rect/geometry described by the Rect ID
 
 **Syntax**
 
+<a name="validkeys"></a>
+
 Keystrokes considered *valid*:
 - A-Z
 - Numrow 0-9
 - Numpad 0-9
 - Fn 1-9 (Same as numrow & numpad)
-- `<RCtrl>`
-    - Arrow keys Left, Right, Up, Down (During an *adjustment*)
+- `<RCtrl>` (See [Command Line Arguments](#commandline))
+    - Arrow keys Left, Right, Up, Down (During an [adjustment](#adjustment))
 
 ---
 
@@ -139,6 +141,8 @@ Focus window by its assigned {Win ID}
 |---|---| ---------|
 
 `FW5`
+
+<a name="adjustment"></a>
 
 ---
 
@@ -239,6 +243,8 @@ Manually flush the internal buffer, for use with `dbf`
 
 ---
 
+<a name="commandline"></a>
+
 **Command line arguments**
 
 `dbf` : Disable buffer flush
@@ -249,6 +255,11 @@ If this flag is passed, `<RCtrl>` will only flush the buffer if the buffer conta
 
 This flag satisfies a few conditionals that print some extra feedback to stdout, primarily regarding syntax evaluation.
 
+`vks` : Virtual Key Submit
+
+Set a non-default submit key. For example, `windozer vks162` will set `<LCtrl>` as winDozer's *submit* key.
+
+This flag should be called with an integer representing a [virtual key](https://docs.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes). Overwrite [valid keystrokes](#validkeys) with this at your own risk. Setting integers that do not represent existing win32 virtual-key codes will effectively disable the *submit* function, and the buffer will never be evaluated. 
 
 `debug` <span style="color:#ccc">
  : Debug mode 
@@ -263,7 +274,7 @@ This flag is intended for development, and in most cases will flood stdout as th
 
 Currently, winDozer's internal syntax buffer is implemented as a character array of length 7. This size is partially arbitrary, and may grow in size or undergo different implementations as the application is developed. The buffer is populated by continuously shifting in the latest *valid* `keydown` caught from a `WH_KEYBOARD_LL` hook, which is set and unhooked each time the application runs. 
 
-By default, the buffer is flushed on `<RCtrl>`, which acts as winDozer's flavor of `<Enter>`. 
+By default, the buffer is flushed on `<RCtrl>`, which acts as winDozer's flavor of `<Enter>`. This is configurable with the `vks` and `dbf` flags.
 
 ---
 
@@ -294,4 +305,3 @@ Windows GUI has plenty of hotkeys and macros for power users such as `alt+tab`, 
 - Parse syntax without [doing so much of this](https://www.youtube.com/watch?v=poz6W0znOfk) and implement [something more robust](https://en.wikipedia.org/wiki/Interpreter_pattern). 
 - Query `ImmersiveShell` for instance of `IVirtualDesktopManagerInternal` and implement those undocumented methods in winDozer. These features are subject to break between Windows builds and will probably warrant an `experimental` command line flag. It would be nice to be able to (C)hange [view to] (D)esktop {desktopID}, among other possibilities.
 - Set a non-default `BUFFSIZE` at runtime.
-- Submitting with `<RCtrl>` should be configurable.

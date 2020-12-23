@@ -44,6 +44,10 @@ void exitHandler(int SIG) {
 
 
 int main(int argc, char* argv[]) {
+    if (!winDozer.initArgs(argc, argv)) {
+        return ERROR_INVALID_COMMAND_LINE;
+    }
+
     if (
         (winDozer.hKbdHook = SetWindowsHookExA(
             WH_KEYBOARD_LL,
@@ -71,7 +75,6 @@ int main(int argc, char* argv[]) {
         ) {
         winDozer.initAppData();
         winDozer.excludeOthers();
-        winDozer.initArgs(argc, argv);
         winDozer.loadRectIDs();
         winDozer.printFigletWelcome();
         winDozer.flushBuffer();
@@ -87,5 +90,5 @@ int main(int argc, char* argv[]) {
 
         getchar();
     }
-    return 0;
+    return EXIT_SUCCESS;
 }

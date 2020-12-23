@@ -28,6 +28,7 @@ void WinDozer::printHelp() {
         << ("\tdbf\t\t\t\t Disable Buffer Flush\n")
         << ("\tverbose\t\t\t\t Extra console feedback\n")
         << ("\tdebug\t\t\t\t Flood stdout with esoteric logging\n")
+        << ("\tvks{virtual key #}\t\t Virtual key submit (Replace default)\n")
         << ("\n")
         << ("Syntax:\n\n")
         << ("\tSR{Rect ID}\t\t\t Set Rect ID\n")
@@ -43,7 +44,7 @@ void WinDozer::printHelp() {
         << ("\tGW\t\t\t\t Get/Print all registered Windows\n")
         << ("\tFLUSH\t\t\t\t Flush Buffer\n")
         << ("\tHELP\t\t\t\t Print this dialog\n")
-        << ("\t<RCtrl>\t\t\t\t Submit\n")
+        << ("\t<RCtrl>\t\t\t\t Submit (default, see flags)\n")
         << ("\n");
 }
 
@@ -420,16 +421,19 @@ void WinDozer::readBuffer() {
     }
 
     else if (std::regex_match(inBuff, reGetRects)) {
+        match = m.str();
         if (verbose) std::cout << match << "\n";
         printRectIDs();
     }
 
     else if (std::regex_match(inBuff, reGetWins)) {
+        match = m.str();
         if (verbose) std::cout << match << "\n";
         printWinIDs();
     }
 
     else if (std::regex_match(inBuff, reHelp)) {
+        match = m.str();
         if (verbose) std::cout << match << "\n";
         printHelp();
     }
@@ -459,7 +463,7 @@ void WinDozer::ingressInput() {
             // Fn 1-9
             inChar = kbdStruct.vkCode - 63; // Offset Fn1 @ 1
         }
-        else if (kbdStruct.vkCode == 163) {
+        else if (kbdStruct.vkCode == SUBMIT) {
             // RCtrl
             readBuffer();
             return;
@@ -476,7 +480,7 @@ void WinDozer::ingressInput() {
             return;
 
         }
-        else if (kbdStruct.vkCode == 163) {
+        else if (kbdStruct.vkCode == SUBMIT) {
             std::cout << "Exit Adjustment.\n";
             // RCtrl
             adjusting = false;
@@ -494,25 +498,52 @@ void WinDozer::ingressInput() {
 }
 
 
-void WinDozer::initArgs(int argc, char* argv[]) {
-    if (argc < 2) return;
+bool WinDozer::initArgs(int argc, char* argv[]) {
+    SUBMIT = VK_RCONTROL;
 
-    std::string flag; //g++ throws a warning without it
+    std::string flag; //g++ throws a warning without it for the comparison
     for (int i = 1; i < argc; i++) {
         flag = argv[i];
+
         if (flag == "dbf") {
             disableBufferFlush = true;
         }
 
-        if (flag == "verbose") {
+        else if (flag == "verbose") {
             verbose = true;
         }
 
-        if (flag == "debug") {
+        else if (flag == "debug") {
             debugBuffer = true;
         }
 
+        else if (flag.substr(0, 3) == "vks") {
+            std::string val = flag.substr(3, std::string::npos);
+
+            int vkNum;
+            try {
+                vkNum = std::stoi(val);
+            }
+            catch (std::out_of_range& e) {
+                std::cout << "Invalid VK: " << val << "\n";
+                return false;
+            }
+
+            if (vkNum <= 0) {
+                std::cout << "Invalid VK: " << val << "\n";
+                return false;
+            }
+
+            SUBMIT = vkNum;
+        }
+
+        else {
+            std::cout << "Invalid argument: " << flag << "\n";
+            return false;
+        }
+
     }
+    return true;
 }
 
 
