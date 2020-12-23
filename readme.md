@@ -43,22 +43,25 @@ Keystrokes considered *valid*:
 - Numrow 0-9
 - Numpad 0-9
 - Fn 1-9 (Same as numrow & numpad)
+- `<RCtrl>`
+    - Arrow keys Left, Right, Up, Down (During an *adjustment*)
+
+---
 
 In the event that the buffer is evaluated containing multiple valid "words", winDozer will choose one in the following precedence:
-###### (buffer conflicts should be rare but are certainly possible.)
+###### (This list can be safely ignored unless you're having problems. Buffer conflicts should be rare but are certainly possible.)
 
 1. Flush
-2. Move Window 
-3. Move This
-4. Set Rect ID
-5. Set Window ID
-6. Erase Rect ID
-7. Erase Window ID
-8. Focus Window
+2. Move Window & Move This
+3. Set Rect ID
+4. Set Window ID
+5. Erase Rect ID
+6. Erase Window ID
+7. Focus Window
+8. Adjust Window & Adjust This
 9. Get Rects
 10. Get Windows
 11. Help
-
 
 **Syntax detail**
 
@@ -73,7 +76,7 @@ Move Window by it's Window ID to the rect described by a Rect ID
 
 ---
 
-- Move This
+- Move This [window]
 
 Move This [window] to Rect {Rect ID}
 
@@ -139,6 +142,46 @@ Focus window by its assigned {Win ID}
 
 ---
 
+- Adjust This [window]
+
+*For those of us who are particularly obsessive-compulsive:*
+
+Adjusts the focused window by shifting it 1px at a time. If this syntax is evaluated from the buffer following `<RCtrl>`, input is limited to only the arrow keys until a subsequent `<RCtrl>` is input. 
+
+| A | T |
+|---|---|
+
+`AT`
+
+`<RCtrl>`
+
+*then*
+
+```
+<Arrow Key Up/Down/Left/Right>
+<Arrow Key Up/Down/Left/Right>
+<Arrow Key Up/Down/Left/Right>
+```
+
+*then*
+
+`<RCtrl>`
+
+---
+
+- Adjust Window
+
+*See `Adjust This` (Above)*
+
+Adjusts the window by shifting it 1px at a time. If this syntax is evaluated from the buffer following `<RCtrl>`, input is limited to only the arrow keys until a subsequent `<RCtrl>` is input. This syntax will lift the window if minimized, but will not necessarily focus the window.
+
+| A | W | {win ID} |
+|---|---|----------|
+
+`AW25`
+
+---
+
 
 - Get Rects
 
@@ -165,7 +208,7 @@ Right coordinate
 
 - Get Windows
 
-Print Window IDs & an associated title, if one can be gleaned from the window handle. 
+Print Window IDs, window class, and an associated title, if one can be gleaned from the window handle. 
 
 | G | W |
 |---|---|
@@ -236,7 +279,7 @@ winDozer will discard attempts to Move or set a Window ID on the following windo
 
 **Deliberately unimplemented behavior**
 
-Windows GUI has plenty of hotkeys and macros for power users such as `alt+tab`, `win+tab`, `win+shift+M`, and `win+<arrow>`. winDozer doesn't try to wrap behavior that is already made convienient in Windows. There is no syntax, for example, to minimize the focused window because there is already an *equally fast* and *prexisting way* to do the exact same thing.
+Windows GUI has plenty of hotkeys and macros for power users such as `alt+tab`, `win+tab`, `win+shift+M`, and `win+<arrow>`. winDozer doesn't try to wrap behavior that is already made convenient in Windows. There is no syntax, for example, to minimize the focused window because there is already an *equally fast, equally convenient, prexisting way* to do the exact same thing. However, sometimes you really want that window adjusted by *one pixel* and nothing more. If this is a repetitive task, using the mouse can be exhausting.
 
 ---
 
@@ -250,6 +293,5 @@ Windows GUI has plenty of hotkeys and macros for power users such as `alt+tab`, 
 **Todo**:
 - Parse syntax without [doing so much of this](https://www.youtube.com/watch?v=poz6W0znOfk) and implement [something more robust](https://en.wikipedia.org/wiki/Interpreter_pattern). 
 - Query `ImmersiveShell` for instance of `IVirtualDesktopManagerInternal` and implement those undocumented methods in winDozer. These features are subject to break between Windows builds and will probably warrant an `experimental` command line flag. It would be nice to be able to (C)hange [view to] (D)esktop {desktopID}, among other possibilities.
-- (A)djust window rect size, (A)djust window rect position
 - Set a non-default `BUFFSIZE` at runtime.
 - Submitting with `<RCtrl>` should be configurable.
