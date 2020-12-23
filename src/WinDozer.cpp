@@ -37,10 +37,13 @@ void WinDozer::printHelp() {
         << ("\tMTR{Rect ID}\t\t\t Move This [window] to Rect\n")
         << ("\tMW{Window ID}R{Rect ID}\t\t Move Window to Rect\n")
         << ("\tFW{Window ID}\t\t\t Focus registered Window by ID\n")
+        << ("\tAW{Window ID}\t\t\t Adjust Window by ID\n")
+        << ("\tAT\t\t\t\t Adjust This [window]\n")
         << ("\tGR\t\t\t\t Get/Print all registered Rects\n")
         << ("\tGW\t\t\t\t Get/Print all registered Windows\n")
         << ("\tFLUSH\t\t\t\t Flush Buffer\n")
         << ("\tHELP\t\t\t\t Print this dialog\n")
+        << ("\t<RCtrl>\t\t\t\t Submit\n")
         << ("\n");
 }
 
@@ -139,11 +142,87 @@ void WinDozer::printWinIDs() {
     }
 
     char winText[MAX_PATH];
+    char classText[MAX_PATH];
     for (auto it = winMap.begin(); it != winMap.end(); it++) {
         std::string winID = it->first;
         GetWindowTextA(winMap[winID], winText, MAX_PATH);
-        std::cout << "Window ID " << winID << ":\t" << winText << "\n\n";
+        GetClassNameA(winMap[winID], classText, sizeof(classText));
+        std::cout << "Window ID " << winID << ":\t" << winText << "\n"
+            << "\t\t" << classText << "\n\n";
     }
+}
+
+
+void WinDozer::enterAdjustWindow(std::string winID) {
+    HWND hwnd;
+    if (winID.empty()) {
+        hwnd = GetForegroundWindow();
+        if (!validWindow(hwnd)) {
+            adjusting = false;
+            return;
+        }
+
+        hAdjustedWindow = hwnd;
+
+    }
+    else {
+        if (!winMap.count(winID)) {
+            std::cout << "No registered windows found for Window ID: "
+                << winID << "\n";
+
+            adjusting = false;
+            return;
+        }
+
+        hAdjustedWindow = winMap[winID];
+    }
+
+    adjusting = true;
+    char winText[MAX_PATH];
+    GetWindowTextA(hAdjustedWindow, winText, MAX_PATH);
+    char classText[MAX_PATH];
+    GetClassNameA(hAdjustedWindow, classText, sizeof(classText));
+    std::cout << "Entering adjustment: " << classText << "\n"
+        << winText << "\n\n";
+}
+
+
+void WinDozer::adjustWindow(DWORD vkCode) {
+    //Raise the window without necessarily focusing it
+    if (IsIconic(hAdjustedWindow)) ShowWindow(hAdjustedWindow, SW_RESTORE);
+
+    RECT winRect;
+    GetWindowRect(hAdjustedWindow, &winRect);
+
+    int x = winRect.left;
+    int y = winRect.top;
+    switch (vkCode) {
+    case 37:
+        // Left
+        x--;
+        break;
+    case 38:
+        // Up
+        y--;
+        break;
+    case 39:
+        // Right
+        x++;
+        break;
+    case 40:
+        // Down
+        y++;
+        break;
+    }
+
+    MoveWindow(
+        hAdjustedWindow,
+        x,
+        y,
+        winRect.right - winRect.left,
+        winRect.bottom - winRect.top,
+        true
+    );
 }
 
 
@@ -267,6 +346,7 @@ void WinDozer::readBuffer() {
     std::regex reEraseRect{ "(ER){1}(\\d+){1}" };
     std::regex reEraseWin{ "(EW){1}(\\d+){1}" };
     std::regex reFocusWin{ "(FW){1}(\\d+){1}" };
+    std::regex reAdjustWin{ "(A){1}(T|W\\d+){1}" };
     //matches
     std::regex reGetRects{ "(\\w|\\d)*(GR)" };
     std::regex reGetWins{ "(\\w|\\d)*(GW)" };
@@ -332,6 +412,13 @@ void WinDozer::readBuffer() {
         focusWindow(winID);
     }
 
+    else if (std::regex_search(inBuff, m, reAdjustWin)) {
+        match = m.str();
+        if (verbose) std::cout << match << "\n";
+        getSuffixID(match, winID);
+        enterAdjustWindow(winID);
+    }
+
     else if (std::regex_match(inBuff, reGetRects)) {
         if (verbose) std::cout << match << "\n";
         printRectIDs();
@@ -354,29 +441,52 @@ void WinDozer::readBuffer() {
 
 void WinDozer::ingressInput() {
     char inChar;
-    if ((kbdStruct.vkCode >= 65) && (kbdStruct.vkCode <= 90)) {
-        // Letter
-        inChar = kbdStruct.vkCode;
-    }
-    else if ((kbdStruct.vkCode >= 48) && (kbdStruct.vkCode <= 57)) {
-        // Numrow
-        inChar = kbdStruct.vkCode;
-    }
-    else if ((kbdStruct.vkCode >= 96) && (kbdStruct.vkCode <= 105)) {
-        // Numpad
-        inChar = kbdStruct.vkCode - 48; // Offset num0 @ 0
-    }
-    else if ((kbdStruct.vkCode >= 112) && (kbdStruct.vkCode <= 120)) {
-        // Fn 1-9
-        inChar = kbdStruct.vkCode - 63; // Offset Fn1 @ 1
-    }
-    else if (kbdStruct.vkCode == 163) {
-        readBuffer();
-        return;
+
+    if (!adjusting) {
+        if ((kbdStruct.vkCode >= 65) && (kbdStruct.vkCode <= 90)) {
+            // Letter
+            inChar = kbdStruct.vkCode;
+        }
+        else if ((kbdStruct.vkCode >= 48) && (kbdStruct.vkCode <= 57)) {
+            // Numrow
+            inChar = kbdStruct.vkCode;
+        }
+        else if ((kbdStruct.vkCode >= 96) && (kbdStruct.vkCode <= 105)) {
+            // Numpad
+            inChar = kbdStruct.vkCode - 48; // Offset num0 @ 0
+        }
+        else if ((kbdStruct.vkCode >= 112) && (kbdStruct.vkCode <= 120)) {
+            // Fn 1-9
+            inChar = kbdStruct.vkCode - 63; // Offset Fn1 @ 1
+        }
+        else if (kbdStruct.vkCode == 163) {
+            // RCtrl
+            readBuffer();
+            return;
+        }
+        else {
+            // LCtrl, L/RShift, Space, Backspace, Enter, Tab, etc...
+            return;
+        }
     }
     else {
-        // LCtrl, L/RShift, Space, Backspace, Enter, Tab, etc...
-        return;
+        if ((kbdStruct.vkCode >= 37) && (kbdStruct.vkCode <= 40)) {
+            // Arrow key
+            adjustWindow(kbdStruct.vkCode);
+            return;
+
+        }
+        else if (kbdStruct.vkCode == 163) {
+            std::cout << "Exit Adjustment.\n";
+            // RCtrl
+            adjusting = false;
+            hAdjustedWindow = NULL;
+            return;
+        }
+        else {
+            // Anything else
+            return;
+        }
     }
 
     shiftBuffer(inChar);
@@ -458,9 +568,9 @@ int WinDozer::getSuffixID(std::string match, std::string& idString, int i) {
 
 
 bool WinDozer::validWindow(HWND hWnd) {
-    char classBuffer[MAX_PATH];
-    GetClassNameA(hWnd, classBuffer, sizeof(classBuffer));
-    std::string className = classBuffer;
+    char classText[MAX_PATH];
+    GetClassNameA(hWnd, classText, sizeof(classText));
+    std::string className = classText;
 
     if (verbose) { std::cout << "Window class: " << className << "\n"; }
 
