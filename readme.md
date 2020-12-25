@@ -204,7 +204,7 @@ Resize the focused window by shifting it's right or bottom border 1px at a time.
 
 *See [`Adjust This`](#adjustment)*
 
-Resize the window (by ID) by shifting it 1px at a time. If this syntax is evaluated from the buffer following `<RCtrl>`, input is limited to only the arrow keys until a subsequent `<RCtrl>` is input. This syntax will lift the window if minimized, but will not necessarily focus the window.
+Resize the window (by ID) by shifting it 1px at a time (from the bottom or right border). If this syntax is evaluated from the buffer following `<RCtrl>`, input is limited to only the arrow keys until a subsequent `<RCtrl>` is input. This syntax will lift the window if minimized, but will not necessarily focus the window.
 
 | A | W | {win ID} | B |
 |---|---|----------|---|
@@ -281,16 +281,17 @@ If this flag is passed, `<RCtrl>` will only flush the buffer if the buffer conta
 
 This flag satisfies a few conditionals that print some extra feedback to stdout, primarily regarding syntax evaluation.
 
+`cleanup` : Cleanup mode
+
+Enables winDozer to do its best to clean up after itself. Upon following `<RCtrl>`/`<Submit>`, a number of backspace keystrokes will be synthesized corresponding to the number of characters contained in the parsed syntax. This helps cut down on backspacing manually if you frequently use winDozer from text fields. Note that only the length of the valid syntax is erased, for example, `MMTR41` will leave behind a single 'm' character in the user's text field. 
+
 `vks` : Virtual Key Submit
 
 Set a non-default submit key. For example, `windozer vks162` will set `<LCtrl>` as winDozer's *submit* key.
 
 This flag should be called with an integer representing a [virtual key](https://docs.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes). Overwrite [valid keystrokes](#validkeys) with this at your own risk. Setting integers that do not represent existing win32 virtual-key codes will effectively disable the *submit* function, and the buffer will never be evaluated. 
 
-`debug` <span style="color:#ccc">
- : Debug mode 
-<br>
-</span>
+`debug` : Debug mode 
 
 This flag is intended for development, and in most cases will flood stdout as the buffer is shifted with valid input. 
 

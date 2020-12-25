@@ -28,7 +28,7 @@ void WinDozer::printHelp() {
         << ("\tdbf\t\t\t\t Disable Buffer Flush\n")
         << ("\tverbose\t\t\t\t Extra console feedback\n")
         << ("\tdebug\t\t\t\t Flood stdout with esoteric logging\n")
-        << ("\tzz\t\t\t\t Synthesize backspace keystrokes following valid input (cleanup)\n")
+        << ("\tcleanup\t\t\t\t Synthesize backspace keystrokes following valid input (cleanup)\n")
         << ("\tvks{virtual key #}\t\t Virtual key submit (Replace default)\n")
         << ("\n")
         << ("Syntax:\n\n")
@@ -353,7 +353,7 @@ void WinDozer::printBuffer() {
     std::cout << ("\n");
 }
 
-
+// https://www.youtube.com/watch?v=SETnK2ny1R0
 void WinDozer::readBuffer() {
     std::string winID{ "" };
     std::string rectID{ "" };
@@ -435,6 +435,9 @@ void WinDozer::readBuffer() {
         match = m.str();
         if (verbose) std::cout << match << "\n";
         getSuffixID(match, winID);
+        // Actions that transfer focus (hopefully only this, deliberate one)
+        // need to clean up *before* the focus is transferred, otherwise
+        // it's possible to trample over some of the user's data typed elsewhere
         cleanUp(match);
         cleanedUp = true;
         focusWindow(winID);
@@ -580,7 +583,7 @@ bool WinDozer::initArgs(int argc, char* argv[]) {
             debugBuffer = true;
         }
 
-        else if (flag == "zz") {
+        else if (flag == "cleanup") {
             cleanup = true;
 
             // Find the keyboard repeat rate:
