@@ -31,12 +31,14 @@ struct WinDozer {
     bool disableBufferFlush;
     bool verbose;
     bool debugBuffer;
+    bool cleanup;
 
     bool adjustBorder;
     bool adjusting;
     HWND hAdjustedWindow;
 
     DWORD SUBMIT;
+    int KBD_REPEAT_RATE;
 
     void printFigletWelcome();
 
@@ -73,6 +75,8 @@ struct WinDozer {
     void printBuffer();
 
     void readBuffer();
+
+    void cleanUp(std::string match);
 
     void ingressInput();
 

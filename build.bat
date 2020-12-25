@@ -7,4 +7,4 @@ g++ ^
 -std=c++17 ^
 -o winDozer
 
-winDozer.exe
+winDozer.exe verbose

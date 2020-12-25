@@ -28,6 +28,7 @@ void WinDozer::printHelp() {
         << ("\tdbf\t\t\t\t Disable Buffer Flush\n")
         << ("\tverbose\t\t\t\t Extra console feedback\n")
         << ("\tdebug\t\t\t\t Flood stdout with esoteric logging\n")
+        << ("\tzz\t\t\t\t Synthesize backspace keystrokes following valid input (cleanup)\n")
         << ("\tvks{virtual key #}\t\t Virtual key submit (Replace default)\n")
         << ("\n")
         << ("Syntax:\n\n")
@@ -374,7 +375,11 @@ void WinDozer::readBuffer() {
     std::regex reFlush{ "(\\d|\\w)*(FLUSH)" };
     std::regex reHelp{ "(\\d|\\w)*(HELP)" };
 
+    bool cleanedUp = false;
+
     if (std::regex_match(inBuff, reFlush)) {
+        match = "FLUSH";
+        if (verbose) std::cout << match << "\n";
         flushBuffer();
     }
 
@@ -430,6 +435,8 @@ void WinDozer::readBuffer() {
         match = m.str();
         if (verbose) std::cout << match << "\n";
         getSuffixID(match, winID);
+        cleanUp(match);
+        cleanedUp = true;
         focusWindow(winID);
     }
 
@@ -448,25 +455,53 @@ void WinDozer::readBuffer() {
     }
 
     else if (std::regex_match(inBuff, reGetRects)) {
-        match = m.str();
+        match = "GR";
         if (verbose) std::cout << match << "\n";
         printRectIDs();
     }
 
     else if (std::regex_match(inBuff, reGetWins)) {
-        match = m.str();
+        match = "GW";
         if (verbose) std::cout << match << "\n";
         printWinIDs();
     }
 
     else if (std::regex_match(inBuff, reHelp)) {
-        match = m.str();
+        match = "HELP";
         if (verbose) std::cout << match << "\n";
         printHelp();
     }
 
+    if (!cleanedUp) cleanUp(match);
 
     if (!disableBufferFlush) flushBuffer();
+}
+
+
+void WinDozer::cleanUp(std::string match) {
+    if (cleanup) {
+        INPUT input;
+        input.type = INPUT_KEYBOARD;
+        input.ki.wScan = 0;
+        input.ki.time = 0;
+        input.ki.dwExtraInfo = 0;
+        input.ki.wVk = VK_BACK;
+
+        // Modern windows apps such as Sticky Notes, Microsoft Store, etc
+        // seem to have trouble here with a loop that only contains calls to
+        // SendInput() using no delay. These modern apps seem to treat subsequent 
+        // backspaces the way a cell phone does when the user holds down the key.
+        // Instead of a constant stream of backspaces, the text starts to get deleted 
+        // in larger and larger "chunks" in order to save the user some time. 
+        // tldr: make sure we don't hit the repeat rate for these backspace inputs:
+        for (size_t i = 0; i < match.size(); i++) {
+            input.ki.dwFlags = 0; // keydown
+            SendInput(1, &input, sizeof(INPUT)); // send backspace
+            input.ki.dwFlags = KEYEVENTF_KEYUP; // keyup
+            Sleep(KBD_REPEAT_RATE); // Go slower than repeat rate, see above
+            SendInput(1, &input, sizeof(INPUT)); // send keyup
+        }
+    }
 }
 
 
@@ -545,6 +580,52 @@ bool WinDozer::initArgs(int argc, char* argv[]) {
             debugBuffer = true;
         }
 
+        else if (flag == "zz") {
+            cleanup = true;
+
+            // Find the keyboard repeat rate:
+            HKEY hKey;
+            long result = RegOpenKeyExA(
+                HKEY_CURRENT_USER,
+                "Control Panel\\Keyboard",
+                0,
+                KEY_READ,
+                &hKey
+            );
+
+            if (result == ERROR_SUCCESS) {
+                DWORD size = 1024;
+                std::string buffer(size / sizeof(wchar_t), '\0');
+
+                result = RegQueryValueExA(
+                    hKey,
+                    "KeyboardSpeed",
+                    NULL,
+                    NULL,
+                    reinterpret_cast<LPBYTE>(&buffer[0]),
+                    &size
+                );
+
+                // Keys of type REG_SZ are null terminated:
+                if (result == ERROR_SUCCESS) {
+                    size_t firstNull = buffer.find_first_of('\0');
+                    if (firstNull != std::string::npos) buffer.resize(firstNull);
+
+                    KBD_REPEAT_RATE = std::stoi(buffer);
+                    RegCloseKey(hKey);
+                }
+                else {
+                    std::cout << "Error: Failed to read REG_SZ KeyboardSpeed\n";
+                    return false;
+                }
+            }
+            else {
+                std::cout << "Error: Unable to open REG_SZ KeyboardSpeed.\n";
+                return false;
+            }
+
+        }
+
         else if (flag.substr(0, 3) == "vks") {
             std::string val = flag.substr(3, std::string::npos);
 
@@ -571,6 +652,7 @@ bool WinDozer::initArgs(int argc, char* argv[]) {
         }
 
     }
+
     return true;
 }
 
