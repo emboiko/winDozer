@@ -77,6 +77,7 @@ int main(int argc, char* argv[]) {
         winDozer.excludeOthers();
         winDozer.loadRectIDs();
         winDozer.printFigletWelcome();
+        winDozer.initBuffer();
         winDozer.flushBuffer();
         signal(SIGINT, exitHandler);
         signal(SIGBREAK, exitHandler);

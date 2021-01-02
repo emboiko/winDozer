@@ -29,7 +29,8 @@ void WinDozer::printHelp() {
         << ("\tverbose\t\t\t\t Extra console feedback\n")
         << ("\tdebug\t\t\t\t Flood stdout with esoteric logging\n")
         << ("\tcleanup\t\t\t\t Synthesize backspace keystrokes following valid input (cleanup)\n")
-        << ("\tvks{virtual key #}\t\t Virtual key submit (Replace default)\n")
+        << ("\tbs{buffer size}\t\t\t Set buffer size (in characters)\n")
+        << ("\tvks{virtual key #}\t\t Virtual key submit (Replace <RCtrl>)\n")
         << ("\n")
         << ("Syntax:\n\n")
         << ("\tSR{Rect ID}\t\t\t Set Rect ID\n")
@@ -342,6 +343,12 @@ void WinDozer::shiftBuffer(char inChar) {
 }
 
 
+void WinDozer::initBuffer() {
+    if (!BUFFSIZE) BUFFSIZE = 7;
+    for (int i = 0; i < BUFFSIZE; i++) inBuff.push_back('_');
+}
+
+
 void WinDozer::flushBuffer() {
     for (short i = 0; i < BUFFSIZE; i++) inBuff[i] = '_';
 }
@@ -375,15 +382,17 @@ void WinDozer::readBuffer() {
     std::regex reFlush{ "(\\d|\\w)*(FLUSH)" };
     std::regex reHelp{ "(\\d|\\w)*(HELP)" };
 
+    std::string buffString(inBuff.begin(), inBuff.end());
+
     bool cleanedUp = false;
 
-    if (std::regex_match(inBuff, reFlush)) {
+    if (std::regex_match(buffString, reFlush)) {
         match = "FLUSH";
         if (verbose) std::cout << match << "\n";
         flushBuffer();
     }
 
-    else if (std::regex_search(inBuff, m, reMoveWin)) {
+    else if (std::regex_search(buffString.c_str(), m, reMoveWin)) {
         match = m.str();
         if (verbose) std::cout << match << "\n";
 
@@ -403,35 +412,35 @@ void WinDozer::readBuffer() {
         }
     }
 
-    else if (std::regex_search(inBuff, m, reSetRect)) {
+    else if (std::regex_search(buffString.c_str(), m, reSetRect)) {
         match = m.str();
         if (verbose) std::cout << match << "\n";
         getSuffixID(match, rectID);
         setRectID(rectID);
     }
 
-    else if (std::regex_search(inBuff, m, reSetWin)) {
+    else if (std::regex_search(buffString.c_str(), m, reSetWin)) {
         match = m.str();
         if (verbose) std::cout << match << "\n";
         getSuffixID(match, winID);
         setWinID(winID);
     }
 
-    else if (std::regex_search(inBuff, m, reEraseRect)) {
+    else if (std::regex_search(buffString.c_str(), m, reEraseRect)) {
         match = m.str();
         if (verbose) std::cout << match << "\n";
         getSuffixID(match, rectID);
         eraseRectID(rectID);
     }
 
-    else if (std::regex_search(inBuff, m, reEraseWin)) {
+    else if (std::regex_search(buffString.c_str(), m, reEraseWin)) {
         match = m.str();
         if (verbose) std::cout << match << "\n";
         getSuffixID(match, winID);
         eraseWinID(winID);
     }
 
-    else if (std::regex_search(inBuff, m, reFocusWin)) {
+    else if (std::regex_search(buffString.c_str(), m, reFocusWin)) {
         match = m.str();
         if (verbose) std::cout << match << "\n";
         getSuffixID(match, winID);
@@ -443,33 +452,33 @@ void WinDozer::readBuffer() {
         focusWindow(winID);
     }
 
-    else if (std::regex_search(inBuff, m, reAdjustWinBorder)) {
+    else if (std::regex_search(buffString.c_str(), m, reAdjustWinBorder)) {
         match = m.str();
         if (verbose) std::cout << match << "\n";
         getSuffixID(match, winID, match.length() - 2);
         enterAdjustWindow(winID, true);
     }
 
-    else if (std::regex_search(inBuff, m, reAdjustWin)) {
+    else if (std::regex_search(buffString.c_str(), m, reAdjustWin)) {
         match = m.str();
         if (verbose) std::cout << match << "\n";
         getSuffixID(match, winID);
         enterAdjustWindow(winID, false);
     }
 
-    else if (std::regex_match(inBuff, reGetRects)) {
+    else if (std::regex_match(buffString, reGetRects)) {
         match = "GR";
         if (verbose) std::cout << match << "\n";
         printRectIDs();
     }
 
-    else if (std::regex_match(inBuff, reGetWins)) {
+    else if (std::regex_match(buffString, reGetWins)) {
         match = "GW";
         if (verbose) std::cout << match << "\n";
         printWinIDs();
     }
 
-    else if (std::regex_match(inBuff, reHelp)) {
+    else if (std::regex_match(buffString, reHelp)) {
         match = "HELP";
         if (verbose) std::cout << match << "\n";
         printHelp();
@@ -647,6 +656,27 @@ bool WinDozer::initArgs(int argc, char* argv[]) {
             }
 
             SUBMIT = vkNum;
+        }
+
+        else if (flag.substr(0, 2) == "bs") {
+            std::string val = flag.substr(2, std::string::npos);
+
+            int buffSize;
+            try {
+                buffSize = std::stoi(val);
+            }
+            catch (std::out_of_range& e) {
+                std::cout << "Invalid Buffer Size\n";
+                return false;
+            }
+
+            if (buffSize <= 6) {
+                std::cout << "Invalid Buffer Size: " << buffSize << "\n"
+                    << "Buffer size must be >= 7 characters";
+                return false;
+            }
+
+            BUFFSIZE = buffSize;
         }
 
         else {

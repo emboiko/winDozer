@@ -29,7 +29,7 @@ Step 2: A given window is placed somewhere on the desktop. As an example, we can
 
 Step 3: We assign the geometry of the currently focused window to a **Rect ID** by typing directly at the window: `sr{rectID}` followed by `<RCtrl>`
 
-A Rect ID is any integer in range (0-9999), *although this is not strictly enforced.* Writing window geometry to a previously assigned ID will overwrite the previous geometry for that ID.
+By default, a Rect ID is any integer in range (0-9999), *although this is not strictly enforced.* Writing window geometry to a previously assigned ID will overwrite the previous geometry for that ID. (See [Command Line Arguments](#commandline))
 
 Step 4: For this example, let's manually move the window somewhere else on the desktop so we can put it back with winDozer
 
@@ -49,6 +49,8 @@ Keystrokes considered *valid*:
     - Arrow keys Left, Right, Up, Down (During an [adjustment](#adjustment))
 
 ---
+
+<a name="precedence"></a>
 
 In the event that the buffer is evaluated containing multiple valid "words", winDozer will choose one in the following precedence:
 ###### (This list can be safely ignored unless you're having problems. Buffer conflicts should be rare but are certainly possible.)
@@ -273,25 +275,31 @@ Manually flush the internal buffer, for use with `dbf`
 
 **Command line arguments**
 
-`dbf` : Disable buffer flush
+- `dbf` : Disable buffer flush
 
 If this flag is passed, `<RCtrl>` will only flush the buffer if the buffer contains "FLUSH". This is useful to repeat a previous action with fewer keystrokes, provided the buffer hasn't been polluted in the meantime.
 
-`verbose` : Verbose console output
+- `verbose` : Verbose console output
 
 This flag satisfies a few conditionals that print some extra feedback to stdout, primarily regarding syntax evaluation.
 
-`cleanup` : Cleanup mode
+- `cleanup` : Cleanup mode
 
 Enables winDozer to do its best to clean up after itself. Upon following `<RCtrl>`/`<Submit>`, a number of backspace keystrokes will be synthesized corresponding to the number of characters contained in the parsed syntax. This helps cut down on backspacing manually if you frequently use winDozer from text fields. Note that only the length of the valid syntax is erased, for example, `MMTR41` will leave behind a single 'm' character in the user's text field. 
 
-`vks` : Virtual Key Submit
+- `vks` : Virtual Key Submit
 
 Set a non-default submit key. For example, `windozer vks162` will set `<LCtrl>` as winDozer's *submit* key.
 
 This flag should be called with an integer representing a [virtual key](https://docs.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes). Overwrite [valid keystrokes](#validkeys) with this at your own risk. Setting integers that do not represent existing win32 virtual-key codes will effectively disable the *submit* function, and the buffer will never be evaluated. 
 
-`debug` : Debug mode 
+- `bs` : Buffer Sizer
+
+Set a non-default buffer size. For example, `windozer bs10` will set winDozer's internal buffer to 10 characters in length. 
+
+This flag should be used with an integer > 6. An upper limit isn't enforced. If you're overflowing type `int` with this argument, something is probably very wrong! Setting a larger buffer size will allow evaluation of macros with long IDs. For example, the syntax `MW1234R1234` requires a minimum buffer size of 11. Esoterically large buffers may result in more frequent [precedence issues](#precedence).
+
+- `debug` : Debug mode 
 
 This flag is intended for development, and in most cases will flood stdout as the buffer is shifted with valid input. 
 
@@ -299,7 +307,7 @@ This flag is intended for development, and in most cases will flood stdout as th
 
 **The buffer**
 
-Currently, winDozer's internal syntax buffer is implemented as a character array of length 7. This size is partially arbitrary, and may grow in size or undergo different implementations as the application is developed. The buffer is populated by continuously shifting in the latest *valid* `keydown` caught from a `WH_KEYBOARD_LL` hook, which is set and unhooked each time the application runs. 
+Currently, winDozer's internal syntax buffer is implemented as a character vector of length 7. This size is somewhat arbitrary, and can be set with the `bs` argument. The buffer is populated by continuously shifting in the latest *valid* `keydown` caught from a `WH_KEYBOARD_LL` hook, which is set and unhooked each time the application runs. 
 
 By default, the buffer is flushed on `<RCtrl>`, which acts as winDozer's flavor of `<Enter>`. This is configurable with the `vks` and `dbf` flags.
 
@@ -331,4 +339,3 @@ Windows GUI has plenty of hotkeys and macros for power users such as `alt+tab`, 
 **Todo**:
 - Parse syntax without [doing so much of this](https://www.youtube.com/watch?v=poz6W0znOfk) and implement [something more robust](https://en.wikipedia.org/wiki/Interpreter_pattern). 
 - Query `ImmersiveShell` for instance of `IVirtualDesktopManagerInternal` and implement those undocumented methods in winDozer. These features are subject to break between Windows builds and will probably warrant an `experimental` command line flag. It would be nice to be able to (C)hange [view to] (D)esktop {desktopID}, among other possibilities.
-- Set a non-default `BUFFSIZE` at runtime.

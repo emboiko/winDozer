@@ -19,15 +19,14 @@ struct WinDozer {
     static const short STDOUT{ 0 };
     static const short FILE{ 1 };
 
-    static const short BUFFSIZE{ 7 };
-    char inBuff[BUFFSIZE];
-
+    std::vector<char> inBuff;
     std::map<std::string, std::vector<int>> rectMap;
     std::map<std::string, HWND> winMap;
 
     std::string appData;
     std::string settings;
 
+    int BUFFSIZE;
     bool disableBufferFlush;
     bool verbose;
     bool debugBuffer;
@@ -69,6 +68,8 @@ struct WinDozer {
     void eraseWinID(std::string winID);
 
     void shiftBuffer(char inChar);
+
+    void initBuffer();
 
     void flushBuffer();
 
