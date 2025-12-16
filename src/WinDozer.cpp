@@ -327,22 +327,30 @@ void WinDozer::focusWindow(std::string winID) {
   }
 }
 
-// For multi-monitor setups with different DPI, we need to move in two steps:
-// 1. First move to the target position (keeping current size) - gets window on correct monitor
-// 2. Then resize to target size - now that it's on the right monitor, resize works correctly
-// We can also use MoveWindow here, but SetWindowPos is more modern and gives more control.
+// Move window to the specified rect coordinates.
+//
+// NOTE: Multi-monitor DPI scaling issues
+// This function uses MoveWindow for simplicity and consistency. However, there are known issues
+// when moving windows between monitors with different DPI scaling settings (e.g., primary at 125%
+// and secondary at 100%). Windows (win32) may incorrectly interpret size parameters, causing
+// windows to grow or shrink unexpectedly.
+//
+// Attempted solutions that didn't work:
+// - Two-step approach (move then resize) with SetWindowPos
+// - Detecting DPI scaling factors and adjusting target sizes
+// - Feedback-based correction after resize (this gets messy and inconsistent)
+//
+// The root issue: GetWindowRect returns DPI-unaware virtual screen coordinates, but SetWindowPos
+// and MoveWindow interpret size parameters based on the DPI of the monitor where the window is.
+// When moving between monitors with different DPI, the size interpretation can be inconsistent.
+//
+// For now, we accept that mixed DPI scaling in multi-monitor setups may cause sizing issues. See
+// readme.md for more details.
 void WinDozer::moveWindowToRect(HWND hWnd, const std::vector<int>& rect) {
-  RECT currentRect;
-  GetWindowRect(hWnd, &currentRect);
-  int currentWidth = currentRect.right - currentRect.left;
-  int currentHeight = currentRect.bottom - currentRect.top;
-  int targetWidth = rect[3] - rect[0];
-  int targetHeight = rect[2] - rect[1];
+  int targetWidth = rect[3] - rect[0];   // right - left
+  int targetHeight = rect[2] - rect[1];  // bottom - top
 
-  SetWindowPos(hWnd, NULL, rect[0], rect[1], currentWidth, currentHeight,
-               SWP_NOZORDER | SWP_SHOWWINDOW);
-  SetWindowPos(hWnd, NULL, rect[0], rect[1], targetWidth, targetHeight,
-               SWP_NOZORDER | SWP_SHOWWINDOW);
+  MoveWindow(hWnd, rect[0], rect[1], targetWidth, targetHeight, TRUE);
 }
 
 // Move This [window] to Rect {Rect ID}

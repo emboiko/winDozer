@@ -408,6 +408,24 @@ Windows GUI has plenty of hotkeys and macros for power users such as `alt+tab`, 
 
 ---
 
+### Known Limitations
+
+**Multi-monitor DPI scaling is currently unsupported**
+
+When moving windows between monitors with different DPI scaling settings (e.g., primary monitor at 125% and secondary monitors at 100%), windows may be incorrectly sized. This is due to how Windows interprets size parameters in `SetWindowPos` and `MoveWindow` based on the DPI of the monitor where the window is located.
+
+The root issue: `GetWindowRect` returns DPI-unaware virtual screen coordinates, but window positioning APIs interpret size parameters based on the monitor's DPI. When moving between monitors with different DPI settings, this can cause windows to grow or shrink unexpectedly.
+
+Workaround: For best results, use the same DPI scaling setting across all monitors, or save rects on the same monitor where you plan to use them.
+
+**Windows that winDozer cannot doze:**
+
+- MSI Afterburner & children
+- Task Manager
+- Just about anything that installs a prior hook and doesn't go on to return a call to `CallNextHookEx()`.
+
+---
+
 ### Run on startup
 
 Simply create a shortcut to winDozer and place it in the Startup folder:
@@ -527,18 +545,6 @@ winDozer commands generally follow a `[ACTION][TARGET][OPTIONS...]` pattern:
 
 ---
 
-### Known bugs
-
-- Windows that winDozer cannot doze:
-
-  - MSI Afterburner & children
-  - Task Manager
-  - Just about anything that installs a prior hook and doesn't go on to return a call to `CallNextHookEx()`.
-
-- Tile-based applications (Microsoft Store, Calculator, etc) can be unpredictable and rarely fit well in the footprint of a non-tiled window.
-
----
-
 ### Future Features / Wishlist
 
 **Virtual Desktop Support**
@@ -610,3 +616,14 @@ A bit silly and pointless but would be fun.
 
 - `smooth` flag - Smooth window transitions (vs instant)
 - `animation-duration{ms}` - Control animation speed
+
+**Multi-monitor DPI Scaling Support**
+
+Proper handling of mixed DPI scaling in multi-monitor setups. This would require:
+
+- Detecting per-monitor DPI settings using `GetDpiForMonitor` or similar APIs
+- Converting between DPI-aware and DPI-unaware coordinate systems
+- Handling `WM_DPICHANGED` messages (if we add a window procedure)
+- Potentially using `AdjustWindowRectExForDpi` for accurate size calculations
+
+The current implementation uses `MoveWindow` which works well for single-monitor or same-DPI setups, but struggles with mixed scaling. A proper solution would need to account for the DPI context when saving and restoring window positions/sizes.
