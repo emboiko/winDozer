@@ -608,5 +608,5 @@ Would require basic history tracking
 
 A bit silly and pointless but would be fun.
 
-`smooth` flag - Smooth window transitions (vs instant)
-`animation-duration{ms}` - Control animation speed
+- `smooth` flag - Smooth window transitions (vs instant)
+- `animation-duration{ms}` - Control animation speed
