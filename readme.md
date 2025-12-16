@@ -34,7 +34,7 @@ Step 2: A given window is placed somewhere on the desktop. As an example, we can
 
 Step 3: We assign the geometry of the currently focused window to a **Rect ID** by typing directly at the window: `sr{rectID}` followed by `<Submit>` (default: `<RCtrl>`)
 
-By default, a Rect ID is any integer in range (0-9999), _although this is not strictly enforced._ Writing window geometry to a previously assigned ID will overwrite the previous geometry for that ID. Rect IDs are persisted to disk in Windows INI format at `$APPDATA/winDozer/settings.ini`. (See [Command Line Arguments](#commandline))
+Generally speaking, a rect ID is any integer that fits in the buffer along with the rest of your command syntax, _although this is not strictly enforced._ Writing window geometry to a previously assigned ID will overwrite the previous geometry for that ID. Rect IDs are persisted to disk in Windows INI format at `$APPDATA/winDozer/settings.ini`. (See [Command Line Arguments](#commandline))
 
 Step 4: For this example, let's manually move the window somewhere else on the desktop so we can put it back with winDozer
 
