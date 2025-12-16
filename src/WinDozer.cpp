@@ -36,8 +36,11 @@ void WinDozer::printHelp() {
   printFigletWelcome();
   std::cout
     << ("Press Ctrl+C or use the 'EXIT' command to exit.\n\n")
+
     << ("https://github.com/emboiko/winDozer\n\n")
+
     << ("Flags:\n\n")
+
     << ("\tdbf\t\t\t\t Disable Buffer Flush\n")
     << ("\tverbose\t\t\t\t Extra console feedback from commands\n")
     << ("\tdebug\t\t\t\t Flood stdout with logs from the buffer\n")
@@ -57,10 +60,8 @@ void WinDozer::printHelp() {
     << ("\tFW{Window ID}\t\t\t Focus Window by ID\n")
     << ("\tAW{Window ID}[S{step}]\t\t Adjust Window by ID (optional step size)\n")
     << ("\tAT[S{step}]\t\t\t Adjust This [window] (optional step size)\n")
-    << ("\t\t\t\t\t Hold <Modifier> while adjusting to resize borders instead of move\n")
     << ("\tSS{Snapshot ID}\t\t\t Save Layout Snapshot\n")
     << ("\tRS{Snapshot ID}\t\t\t Restore Layout Snapshot\n")
-    << ("\n") 
     << ("\tPT\t\t\t\t Pin/Unpin This [window] (toggle always-on-top)\n")
     << ("\tCT\t\t\t\t Center This [window] on its current display\n")
     << ("\tGR\t\t\t\t Get/Print all Rects\n")
@@ -71,7 +72,8 @@ void WinDozer::printHelp() {
     << ("\tFLUSH\t\t\t\t Flush Buffer\n")
     << ("\tHELP\t\t\t\t Print this dialog\n")
     << ("\tEXIT\t\t\t\t Exit winDozer\n")
-    << ("\t<Submit>\t\t\t Evaluate Buffer (default: <RCtrl>, see flags)\n");
+    << ("\t<Submit>\t\t\t Evaluate Buffer (default: <RCtrl>)\n")
+    << ("\t<Modifier>\t\t\t Modifier key for adjust/resize mode (default: <LCtrl>)\n");
   }
 // clang-format on
 
@@ -767,9 +769,6 @@ void WinDozer::saveLayoutSnapshot(std::string snapshotID) {
   if (verbose) {
     std::cout << getTimestamp() << "SAVE Layout Snapshot " << snapshotID << " ("
               << collectedWindows.size() << " windows)\n";
-  } else {
-    std::cout << "Saved layout snapshot " << snapshotID << " (" << collectedWindows.size()
-              << " windows)\n";
   }
 }
 
@@ -942,8 +941,5 @@ void WinDozer::restoreLayoutSnapshot(std::string snapshotID) {
   if (verbose) {
     std::cout << getTimestamp() << "RESTORE Layout Snapshot " << snapshotID
               << " (restored: " << restored << ", not found: " << notFound << ")\n";
-  } else {
-    std::cout << "Restored layout snapshot " << snapshotID << " (restored: " << restored
-              << ", not found: " << notFound << ")\n";
   }
 }
