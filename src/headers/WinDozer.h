@@ -103,12 +103,7 @@ struct WinDozer {
   void flushBuffer();
   void printBuffer();
 
-  // Command parsing (legacy regex-based)
-  void readBuffer();
-  void parseAdjustCommand(const std::string& winIDPart, const std::string& stepGroup,
-                          const std::string& stepDigitsGroup, std::string& winID, int& step);
-
-  // Command parsing (interpreter-based)
+  // Command parsing
   void interpretBuffer();
   enum class TokenType { COMMAND, NUMBER, IDENTIFIER, END, UNKNOWN };
   struct Token {
