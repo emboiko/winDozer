@@ -562,3 +562,51 @@ Potential features could include:
 - Snapshot/restore layouts across multiple desktops
 - Commands to switch virtual desktops
 - Commands to move windows to specific virtual desktops
+
+**System Commands**
+
+- `RESET` - Clear persisted settings
+  - Wipes all rect IDs from settings.ini
+  - Useful for a fresh start without deleting the file
+- `CLEAR` - Clear in-memory state
+  - Clears window IDs, snapshots, stored geometry
+  - Keeps rect IDs intact
+- `INFO` - Show current state
+  - Buffer size, submit key, modifier key
+  - Counts: rects, windows, snapshots
+
+**Window Info Command(s)**
+
+- `GT` - Get This [window's] info (class, title, position, size, state)
+
+**Positioning Enhancements**
+
+These would be nice if you happen to know the explicit dimensions you want to resize to.
+
+- `RTW{width}H{height}` - Resize This to Width x Height
+- `RW{ID}W{width}H{height}` - Resize Window by ID
+
+**Window Groups**
+
+- `SG{groupID}` - Set Group (assign focused window to group)
+- `MG{groupID}R{rectID}` - Move Group to Rect (all windows in group)
+
+**Settings & Persistence**
+
+- `config='{path}'` - Flag for custom settings.ini location
+- `EXPORT` - Export all rects to .ini (without having to close winDozer to generate it)
+- `IMPORT` - Import rects from .ini
+
+**Undo/Redo**
+
+Would require basic history tracking
+
+- `ZZ` - Undo last window movement
+- `YY` - Redo last undone movement
+
+**Animation Toggle**
+
+A bit silly and pointless but would be fun.
+
+`smooth` flag - Smooth window transitions (vs instant)
+`animation-duration{ms}` - Control animation speed
