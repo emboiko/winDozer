@@ -1,775 +1,954 @@
-#include <iostream>
-#include <filesystem>
-#include <fstream>
-#include <regex>
-#include <map>
-#include <vector>
-#include <signal.h>
-#include <Windows.h>
 #include "headers/WinDozer.h"
+#include <Windows.h>
+#include <psapi.h>
+#include <algorithm>
+#include <climits>
+#include <cstring>
+#include <ctime>
+#include <iomanip>
+#include <iostream>
+#include <map>
+#include <regex>
+#include <sstream>
+#include <vector>
 
+std::string WinDozer::getTimestamp() {
+  auto now = std::time(nullptr);
+  std::tm timeInfo;
+  localtime_s(&timeInfo, &now);
+
+  std::ostringstream oss;
+  oss << std::setfill('0') << "[" << std::setw(2) << timeInfo.tm_hour << ":" << std::setw(2)
+      << timeInfo.tm_min << ":" << std::setw(2) << timeInfo.tm_sec << "] ";
+  return oss.str();
+}
 
 void WinDozer::printFigletWelcome() {
-    std::cout
-        << ("          _          ___                  \n")
-        << ("__      _(_)_ __    /   \\___ _______ _ __ \n")
-        << ("\\ \\ /\\ / / | '_ \\  / /\\ / _ \\_  / _ \\ '__|\n")
-        << (" \\ V  V /| | | | |/ /_// (_) / /  __/ |   \n")
-        << ("  \\_/\\_/ |_|_| |_/____/ \\___/___\\___|_|\n\n");
+  std::cout << ("          _          ___                  \n")
+            << ("__      _(_)_ __    /   \\___ _______ _ __ \n")
+            << ("\\ \\ /\\ / / | '_ \\  / /\\ / _ \\_  / _ \\ '__|\n")
+            << (" \\ V  V /| | | | |/ /_// (_) / /  __/ |   \n")
+            << ("  \\_/\\_/ |_|_| |_/____/ \\___/___\\___|_|\n\n");
 }
 
-
+// clang-format off
 void WinDozer::printHelp() {
-    printFigletWelcome();
-    std::cout
-        << ("Press Ctrl+C to exit.\n\n")
-        << ("https://github.com/emboiko/winDozer\n\n")
-        << ("Flags:\n\n")
-        << ("\tdbf\t\t\t\t Disable Buffer Flush\n")
-        << ("\tverbose\t\t\t\t Extra console feedback\n")
-        << ("\tdebug\t\t\t\t Flood stdout with esoteric logging\n")
-        << ("\tcleanup\t\t\t\t Synthesize backspace keystrokes following valid input (cleanup)\n")
-        << ("\tbs{buffer size}\t\t\t Set buffer size (in characters)\n")
-        << ("\tvks{virtual key #}\t\t Virtual key submit (Replace <RCtrl>)\n")
-        << ("\n")
-        << ("Syntax:\n\n")
-        << ("\tSR{Rect ID}\t\t\t Set Rect ID\n")
-        << ("\tSW{Window ID}\t\t\t Set Window ID\n")
-        << ("\tER{Rect ID}\t\t\t Erase Rect ID\n")
-        << ("\tEW{Window ID}\t\t\t Erase Window ID\n")
-        << ("\tMTR{Rect ID}\t\t\t Move This [window] to Rect\n")
-        << ("\tMW{Window ID}R{Rect ID}\t\t Move Window to Rect\n")
-        << ("\tFW{Window ID}\t\t\t Focus Window by ID\n")
-        << ("\tAW{Window ID}\t\t\t Adjust Window by ID\n")
-        << ("\tAW{Window ID}B\t\t\t Adjust Window Border by ID\n")
-        << ("\tAT\t\t\t\t Adjust This [window]\n")
-        << ("\tATB\t\t\t\t Adjust This [window's] Border\n")
-        << ("\tGR\t\t\t\t Get/Print all Rects\n")
-        << ("\tGW\t\t\t\t Get/Print all Windows\n")
-        << ("\tFLUSH\t\t\t\t Flush Buffer\n")
-        << ("\tHELP\t\t\t\t Print this dialog\n")
-        << ("\t<RCtrl>\t\t\t\t Submit (default, see flags)\n")
-        << ("\n");
-}
+  printFigletWelcome();
+  std::cout
+    << ("Press Ctrl+C or use the 'EXIT' command to exit.\n\n")
+    << ("https://github.com/emboiko/winDozer\n\n")
+    << ("Flags:\n\n")
+    << ("\tdbf\t\t\t\t Disable Buffer Flush\n")
+    << ("\tverbose\t\t\t\t Extra console feedback from commands\n")
+    << ("\tdebug\t\t\t\t Flood stdout with logs from the buffer\n")
+    << ("\tcleanup\t\t\t\t Synthesize backspace keystrokes following valid input evaluation\n")
+    << ("\tbs{buffer size}\t\t\t Set buffer size\n")
+    << ("\tvks{virtual key #}\t\t Virtual key submit/evaluate\n")
+    << ("\tvkm{virtual key #}\t\t Virtual key modifier for adjust/resize mode\n") 
 
-
-void WinDozer::loadRectIDs() {
-    std::string rectCoord;
-    std::string rectID;
-    std::vector<int> rect;
-    std::regex reRectID{ "Rect ID\\s{1}(\\d+){1}:{1}" };
-
-    std::string line;
-    std::fstream inFile(settings);
-    while (std::getline(inFile, line)) {
-
-        if (std::regex_match(line, reRectID)) {
-            line.erase(0, 8); // trim prefix
-            line.erase(line.length() - 1, 1); // trim suffix
-            rectID = line;
-
-            rect.erase(rect.begin(), rect.end());
-
-            // Walk the next four lines for that rect ID and collect coords
-            for (int i = 0; i < 4; i++) {
-                std::getline(inFile, rectCoord);
-                rect.push_back(
-                    std::stoi(rectCoord)
-                );
-            }
-
-            rectMap[rectID] = rect;
-        }
-
-    }
-
-    inFile.close();
-}
+    << ("\nSyntax:\n\n") 
+    
+    << ("\tSR{Rect ID}\t\t\t Set [focused window's] Rect ID\n")
+    << ("\tSW{Window ID}\t\t\t Set Window ID\n")
+    << ("\tER{Rect ID}\t\t\t Erase Rect ID\n")
+    << ("\tEW{Window ID}\t\t\t Erase Window ID\n")
+    << ("\tMTR{Rect ID}\t\t\t Move This [window] to Rect\n")
+    << ("\tMW{Window ID}R{Rect ID}\t\t Move Window to Rect\n")
+    << ("\tFW{Window ID}\t\t\t Focus Window by ID\n")
+    << ("\tAW{Window ID}[S{step}]\t\t Adjust Window by ID (optional step size)\n")
+    << ("\tAT[S{step}]\t\t\t Adjust This [window] (optional step size)\n")
+    << ("\t\t\t\t\t Hold <Modifier> while adjusting to resize borders instead of move\n")
+    << ("\tSS{Snapshot ID}\t\t\t Save Layout Snapshot\n")
+    << ("\tRS{Snapshot ID}\t\t\t Restore Layout Snapshot\n")
+    << ("\n") 
+    << ("\tPT\t\t\t\t Pin/Unpin This [window] (toggle always-on-top)\n")
+    << ("\tCT\t\t\t\t Center This [window] on its current display\n")
+    << ("\tGR\t\t\t\t Get/Print all Rects\n")
+    << ("\tGW\t\t\t\t Get/Print all Windows\n")
+    << ("\tGS\t\t\t\t Get/Print all Layout Snapshots\n")
+    << ("\tCG\t\t\t\t Copy/Store focused window's geometry\n")
+    << ("\tVG\t\t\t\t Paste/Apply stored geometry to focused window\n")
+    << ("\tFLUSH\t\t\t\t Flush Buffer\n")
+    << ("\tHELP\t\t\t\t Print this dialog\n")
+    << ("\tEXIT\t\t\t\t Exit winDozer\n")
+    << ("\t<Submit>\t\t\t Evaluate Buffer (default: <RCtrl>, see flags)\n");
+  }
+// clang-format on
 
 
 void WinDozer::setRectID(std::string rectID) {
-    std::vector<int> rect;
+  std::vector<int> rect;
 
-    RECT winRect;
-    HWND hActvWnd = GetForegroundWindow();
-    if (!validWindow(hActvWnd)) return;
+  RECT winRect;
+  HWND hActvWnd = GetForegroundWindow();
+  if (!validWindow(hActvWnd)) {
+    return;
+  }
 
-    GetWindowRect(hActvWnd, &winRect);
+  GetWindowRect(hActvWnd, &winRect);
 
-    rect.push_back(winRect.left);
-    rect.push_back(winRect.top);
-    rect.push_back(winRect.bottom);
-    rect.push_back(winRect.right);
+  rect.push_back(winRect.left);
+  rect.push_back(winRect.top);
+  rect.push_back(winRect.bottom);
+  rect.push_back(winRect.right);
 
-    rectMap[rectID] = rect;
+  rectMap[rectID] = rect;
 
-    std::cout << "SET RectID " << rectID << "\n\n";
+  if (verbose) {
+    std::cout << getTimestamp() << "SET Rect " << rectID << "\n";
+  }
 }
-
 
 void WinDozer::eraseRectID(std::string rectID) {
-    if (!rectMap.erase(rectID)) {
-        std::cout << "No registered rects found for Rect ID: "
-            << rectID << "\n";
+  if (!rectMap.erase(rectID)) {
+    std::cout << "No coordinates found for Rect ID: " << rectID << "\n";
+  } else {
+    if (verbose) {
+      std::cout << getTimestamp() << "ERASE Rect " << rectID << "\n";
     }
-    else {
-        std::cout << "ERASE RectID " << rectID << "\n\n";
-    };
+  };
 }
 
+void WinDozer::printRects() {
+  if (rectMap.empty()) {
+    std::cout << "No registered Rect ID(s) found\n";
+    return;
+  }
 
-void WinDozer::printRectIDs(int outMode = STDOUT, std::string path = "") {
-    if (rectMap.empty()) {
-        std::cout << "No registered Rect ID(s) found\n";
-        return;
+  std::cout << "\n";
+  std::cout << "GET Rects:\n";
+  std::cout << "------------\n";
+
+  for (auto it = rectMap.begin(); it != rectMap.end(); it++) {
+    std::string rectID = it->first;
+    std::vector<int> coords = rectMap[rectID];
+
+    if (coords.size() == 4) {
+      int x = coords[0];                   // left
+      int y = coords[1];                   // top
+      int width = coords[3] - coords[0];   // right - left
+      int height = coords[2] - coords[1];  // bottom - top
+
+      std::cout << "Rect ID " << rectID << ":\n";
+      std::cout << "  X:      " << x << "\n";
+      std::cout << "  Y:      " << y << "\n";
+      std::cout << "  Width:  " << width << "\n";
+      std::cout << "  Height: " << height << "\n";
+      std::cout << "\n";
     }
+  }
+}
 
-    if (outMode == FILE) freopen(path.c_str(), "w+", stdout);
+void WinDozer::printSnapshots() {
+  if (layoutSnapshots.empty()) {
+    std::cout << "No layout snapshots found\n";
+    return;
+  }
 
-    for (auto it = rectMap.begin(); it != rectMap.end(); it++) {
-        std::string rectID = it->first;
-        std::cout << "Rect ID " << rectID << ":\n";
-        for (int coordinate : rectMap[rectID]) {
-            std::cout << "\t" << coordinate << "\n";
-        }
+  std::cout << "\n";
+  std::cout << "GET Snapshots:\n";
+  std::cout << "------------\n";
+
+  for (auto it = layoutSnapshots.begin(); it != layoutSnapshots.end(); it++) {
+    std::string snapshotID = it->first;
+    const std::vector<WindowSnapshot>& snapshot = it->second;
+
+    std::cout << "Snapshot ID " << snapshotID << " (" << snapshot.size() << " windows):\n";
+    for (size_t i = 0; i < snapshot.size(); i++) {
+      const WindowSnapshot& win = snapshot[i];
+      int x = win.rect[0];
+      int y = win.rect[1];
+      int width = win.rect[3] - win.rect[0];
+      int height = win.rect[2] - win.rect[1];
+
+      std::cout << "  [" << (i + 1) << "] " << win.windowTitle << " (" << win.className << ")\n";
+      std::cout << "      X: " << x << ", Y: " << y << ", Width: " << width
+                << ", Height: " << height << "\n";
     }
-
-    if (outMode == FILE) fclose(stdout);
-
     std::cout << "\n";
+  }
 }
-
 
 void WinDozer::printWinIDs() {
-    if (winMap.empty()) {
-        std::cout << "No registered Window ID(s) found\n";
-        return;
-    }
+  if (winMap.empty()) {
+    std::cout << "No registered Window ID(s) found\n";
+    return;
+  }
 
-    char winText[MAX_PATH];
-    char classText[MAX_PATH];
-    for (auto it = winMap.begin(); it != winMap.end(); it++) {
-        std::string winID = it->first;
-        GetWindowTextA(winMap[winID], winText, MAX_PATH);
-        GetClassNameA(winMap[winID], classText, sizeof(classText));
-        std::cout << "Window ID " << winID << ":\t" << winText << "\n"
-            << "\t\t" << classText << "\n\n";
-    }
+  char winText[MAX_PATH];
+  char classText[MAX_PATH];
+  for (auto it = winMap.begin(); it != winMap.end(); it++) {
+    std::string winID = it->first;
+    GetWindowTextA(winMap[winID], winText, MAX_PATH);
+    GetClassNameA(winMap[winID], classText, sizeof(classText));
+    std::cout << "Window ID " << winID << ":\t" << winText << "\n"
+              << "\t\t" << classText << "\n";
+  }
 }
 
-
-void WinDozer::enterAdjustWindow(std::string winID, bool border) {
-    HWND hwnd;
-    if (winID.empty()) {
-        hwnd = GetForegroundWindow();
-        if (!validWindow(hwnd)) {
-            adjusting = false;
-            return;
-        }
-
-        hAdjustedWindow = hwnd;
-
-    }
-    else {
-        if (!winMap.count(winID)) {
-            std::cout << "No registered windows found for Window ID: "
-                << winID << "\n";
-
-            adjusting = false;
-            return;
-        }
-
-        hAdjustedWindow = winMap[winID];
+void WinDozer::enterAdjustWindowMode(std::string winID, int step) {
+  HWND hwnd;
+  if (winID.empty()) {
+    hwnd = GetForegroundWindow();
+    if (!validWindow(hwnd)) {
+      adjusting = false;
+      return;
     }
 
-    adjusting = true;
-    border ? adjustBorder = true : false;
-    char winText[MAX_PATH];
-    GetWindowTextA(hAdjustedWindow, winText, MAX_PATH);
-    std::cout << "Entering adjustment:\n" << winText << "\n";
+    // The currently focused window
+    hAdjustedWindow = hwnd;
+
+  } else {
+    if (!winMap.count(winID)) {
+      std::cout << "No registered windows found for Window ID: " << winID << "\n";
+
+      adjusting = false;
+      return;
+    }
+
+    // The window with the given ID/handle
+    hAdjustedWindow = winMap[winID];
+  }
+
+  adjusting = true;
+  adjustStep = (step > 0) ? step : 1;  // Ensure step is at least 1
+  char winText[MAX_PATH];
+  GetWindowTextA(hAdjustedWindow, winText, MAX_PATH);
+  if (verbose) {
+    std::cout << getTimestamp() << "ADJUST Window " << winText << " (step: " << adjustStep
+              << ", hold <Modifier> to resize)\n";
+  }
 }
 
+void WinDozer::exitAdjustWindowMode() {
+  if (verbose) {
+    std::cout << getTimestamp() << "Exit Adjustment.\n";
+  }
+  adjusting = false;
+  hAdjustedWindow = NULL;
+}
 
-void WinDozer::adjustWindow(DWORD vkCode) {
-    //Raise the window without necessarily focusing it
-    if (IsIconic(hAdjustedWindow)) ShowWindow(hAdjustedWindow, SW_RESTORE);
+void WinDozer::adjustWindow(DWORD vkCode, bool isResizeMode) {
+  // Raise the window without necessarily focusing it
+  if (IsIconic(hAdjustedWindow)) {
+    ShowWindow(hAdjustedWindow, SW_RESTORE);
+  }
 
-    RECT winRect;
-    GetWindowRect(hAdjustedWindow, &winRect);
+  RECT winRect;
+  GetWindowRect(hAdjustedWindow, &winRect);
+  char winText[MAX_PATH];
+  GetWindowTextA(hAdjustedWindow, winText, MAX_PATH);
 
-    int x = winRect.left;
-    int y = winRect.top;
-    int width = winRect.right - winRect.left;
-    int height = winRect.bottom - winRect.top;
+  int oldX = winRect.left;
+  int oldY = winRect.top;
+  int oldWidth = winRect.right - winRect.left;
+  int oldHeight = winRect.bottom - winRect.top;
 
-    switch (vkCode) {
+  int newX = winRect.left;
+  int newY = winRect.top;
+  int newWidth = winRect.right - winRect.left;
+  int newHeight = winRect.bottom - winRect.top;
+
+  switch (vkCode) {
     case 37:
-        // Left
-        x--;
-        width--;
-        break;
+      // Left
+      if (isResizeMode) {
+        newWidth -= adjustStep;
+      } else {
+        newX -= adjustStep;
+      }
+      break;
     case 38:
-        // Up
-        y--;
-        height--;
-        break;
+      // Up
+      if (isResizeMode) {
+        newHeight -= adjustStep;
+      } else {
+        newY -= adjustStep;
+      }
+      break;
     case 39:
-        // Right
-        x++;
-        width++;
-        break;
+      // Right
+      if (isResizeMode) {
+        newWidth += adjustStep;
+      } else {
+        newX += adjustStep;
+      }
+      break;
     case 40:
-        // Down
-        y++;
-        height++;
-        break;
-    }
+      // Down
+      if (isResizeMode) {
+        newHeight += adjustStep;
+      } else {
+        newY += adjustStep;
+      }
+      break;
+  }
 
-    if (adjustBorder) {
-        MoveWindow(
-            hAdjustedWindow,
-            winRect.left,
-            winRect.top,
-            width,
-            height,
-            true
-        );
+  // SetWindowPos is used here for consistency with moveWindowToRect
+  if (isResizeMode) {
+    // Resizes the window with the same location
+    SetWindowPos(hAdjustedWindow, NULL, winRect.left, winRect.top, newWidth, newHeight,
+                 SWP_NOZORDER | SWP_SHOWWINDOW);
+    if (verbose) {
+      std::cout << getTimestamp() << "ADJUST Window (resize) " << winText << " from (" << oldWidth
+                << ", " << oldHeight << ") to (" << newWidth << ", " << newHeight << ") "
+                << "step: " << adjustStep << "\n";
     }
-    else {
-        MoveWindow(
-            hAdjustedWindow,
-            x,
-            y,
-            winRect.right - winRect.left,
-            winRect.bottom - winRect.top,
-            true
-        );
+  } else {
+    // Moves the window with the same width and height
+    SetWindowPos(hAdjustedWindow, NULL, newX, newY, winRect.right - winRect.left,
+                 winRect.bottom - winRect.top, SWP_NOZORDER | SWP_SHOWWINDOW);
+    if (verbose) {
+      std::cout << getTimestamp() << "ADJUST Window (move) " << winText << " from (" << oldX << ", "
+                << oldY << ") to (" << newX << ", " << newY << ") " << "step: " << adjustStep
+                << "\n";
     }
+  }
 }
-
 
 void WinDozer::focusWindow(std::string winID) {
-    if (!winMap.count(winID)) {
-        std::cout << "No registered windows found for Window ID: "
-            << winID << "\n";
-        return;
-    }
+  if (!winMap.count(winID)) {
+    std::cout << "No registered windows found for Window ID: " << winID << "\n";
+    return;
+  }
 
-    // Restore the window if neccesary:
-    if (IsIconic(winMap[winID])) ShowWindow(winMap[winID], SW_RESTORE);
-    // Perform a magic ritual to please the Windows Gods:
-    keybd_event(0, 0, 0, 0);
-    // Focus the window:
-    SetForegroundWindow(winMap[winID]);
+  // Restore the window if neccesary:
+  if (IsIconic(winMap[winID])) {
+    ShowWindow(winMap[winID], SW_RESTORE);
+  }
+  // Perform a magic ritual:
+  keybd_event(0, 0, 0, 0);
+  // Focus the window:
+  SetForegroundWindow(winMap[winID]);
+  if (verbose) {
+    std::cout << getTimestamp() << "FOCUS Window " << winID << "\n";
+  }
 }
 
+// For multi-monitor setups with different DPI, we need to move in two steps:
+// 1. First move to the target position (keeping current size) - gets window on correct monitor
+// 2. Then resize to target size - now that it's on the right monitor, resize works correctly
+// We can also use MoveWindow here, but SetWindowPos is more modern and gives more control.
+void WinDozer::moveWindowToRect(HWND hWnd, const std::vector<int>& rect) {
+  RECT currentRect;
+  GetWindowRect(hWnd, &currentRect);
+  int currentWidth = currentRect.right - currentRect.left;
+  int currentHeight = currentRect.bottom - currentRect.top;
+  int targetWidth = rect[3] - rect[0];
+  int targetHeight = rect[2] - rect[1];
 
+  SetWindowPos(hWnd, NULL, rect[0], rect[1], currentWidth, currentHeight,
+               SWP_NOZORDER | SWP_SHOWWINDOW);
+  SetWindowPos(hWnd, NULL, rect[0], rect[1], targetWidth, targetHeight,
+               SWP_NOZORDER | SWP_SHOWWINDOW);
+}
+
+// Move This [window] to Rect {Rect ID}
 void WinDozer::moveWindow(std::string rectID) {
-    if (!rectMap.count(rectID)) {
-        std::cout << "No registered rects found for Rect ID: "
-            << rectID << "\n";
-        return;
-    }
+  if (!rectMap.count(rectID)) {
+    std::cout << "No registered rects found for Rect ID: " << rectID << "\n";
+    return;
+  }
 
-    HWND hActvWnd = GetForegroundWindow();
-    if (!validWindow(hActvWnd)) return;
+  HWND hActvWnd = GetForegroundWindow();
+  if (!validWindow(hActvWnd)) {
+    return;
+  }
 
-    ShowWindow(hActvWnd, SW_RESTORE); // Window won't move if it's maximized
-    MoveWindow(
-        hActvWnd,
-        // X:
-        rectMap[rectID][0],
-        // Y:
-        rectMap[rectID][1],
-        // Width:
-        rectMap[rectID][3] - rectMap[rectID][0],
-        // Height:
-        rectMap[rectID][2] - rectMap[rectID][1],
-        // Repaint:
-        true
-    );
+  ShowWindow(hActvWnd, SW_RESTORE);  // Window won't move if it's maximized
+  moveWindowToRect(hActvWnd, rectMap[rectID]);
+
+  if (verbose) {
+    std::cout << getTimestamp() << "MOVE [focused] Window to Rect " << rectID << "\n";
+  }
 }
 
-
+// Move a [window] by its {Window ID} to the rect described by a {Rect ID}
 void WinDozer::moveWindow(std::string winID, std::string rectID) {
-    if (!winMap.count(winID)) {
-        std::cout << "No registered windows found for Window ID: "
-            << winID << "\n";
-        return;
-    }
-    if (!rectMap.count(rectID)) {
-        std::cout << "No registered rects found for Rect ID: "
-            << rectID << "\n";
-        return;
-    }
+  if (!winMap.count(winID)) {
+    std::cout << "No registered windows found for Window ID: " << winID << "\n";
+    return;
+  }
+  if (!rectMap.count(rectID)) {
+    std::cout << "No registered rects found for Rect ID: " << rectID << "\n";
+    return;
+  }
 
-    ShowWindow(winMap[winID], SW_RESTORE); // Restore the window if it's minimized
-    MoveWindow(
-        winMap[winID],
-        rectMap[rectID][0],
-        rectMap[rectID][1],
-        rectMap[rectID][3] - rectMap[rectID][0],
-        rectMap[rectID][2] - rectMap[rectID][1],
-        TRUE
-    );
+  ShowWindow(winMap[winID], SW_RESTORE);  // Restore the window if it's minimized
+  moveWindowToRect(winMap[winID], rectMap[rectID]);
+
+  if (verbose) {
+    std::cout << getTimestamp() << "MOVE Window " << winID << " to Rect " << rectID << "\n";
+  }
 }
-
 
 void WinDozer::setWinID(std::string winID) {
-    HWND hActvWnd = GetForegroundWindow();
-    if (!validWindow(hActvWnd)) return;
+  HWND hActvWnd = GetForegroundWindow();
+  if (!validWindow(hActvWnd)) {
+    return;
+  }
 
-    winMap[winID] = hActvWnd;
-    std::cout << "SET Window ID " << winID << "\n\n";
+  winMap[winID] = hActvWnd;
+  if (verbose) {
+    std::cout << getTimestamp() << "SET Window ID " << winID << "\n";
+  }
 }
-
 
 void WinDozer::eraseWinID(std::string winID) {
-    if (!winMap.erase(winID)) {
-        std::cout << "No registered windows found for Window ID: "
-            << winID << "\n";
+  if (!winMap.erase(winID)) {
+    std::cout << "No registered windows found for Window ID: " << winID << "\n";
+  } else {
+    if (verbose) {
+      std::cout << getTimestamp() << "ERASE Window ID: " << winID << "\n";
     }
-    else {
-        std::cout << "ERASE Window ID: " << winID << "\n\n";
-    };
+  };
 }
 
+// Helper function to detect if a window belongs to a modern/UWP app
+// Modern apps are hosted by ApplicationFrameHost.exe, which we can detect
+// by checking the process executable name
+static bool isModernApp(HWND hWnd) {
+  DWORD processId = 0;
+  GetWindowThreadProcessId(hWnd, &processId);
+  if (processId == 0) {
+    return true;  // Can't determine, assume modern
+  }
 
-void WinDozer::shiftBuffer(char inChar) {
-    for (short i = 0; i < BUFFSIZE; i++) {
-        inBuff[i] = inBuff[i + 1];
+  HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processId);
+  if (!hProcess) {
+    return true;  // Can't open process, assume modern
+  }
+
+  char exePath[MAX_PATH];
+  bool isModern = true;
+  if (GetModuleFileNameExA(hProcess, NULL, exePath, MAX_PATH)) {
+    // Extract just the filename from the path
+    const char* exeName = strrchr(exePath, '\\');
+    exeName = exeName ? exeName + 1 : exePath;
+    // UWP apps are hosted by ApplicationFrameHost.exe
+    if (_stricmp(exeName, "ApplicationFrameHost.exe") == 0) {
+      isModern = true;
+    } else {
+      isModern = false;
     }
-    inBuff[BUFFSIZE - 1] = inChar;
+  }
+
+  CloseHandle(hProcess);
+  return isModern;
 }
 
+void WinDozer::exitWinDozer(int exitCode) {
+  // Save settings
+  saveRectIDs(settingsPath);
 
-void WinDozer::initBuffer() {
-    if (!BUFFSIZE) BUFFSIZE = 7;
-    for (int i = 0; i < BUFFSIZE; i++) inBuff.push_back('_');
-}
+  // Unhook keyboard and window event hooks
+  if (hKbdHook != NULL) {
+    UnhookWindowsHookEx(hKbdHook);
+  }
+  if (hWinEventHook != NULL) {
+    UnhookWinEvent(hWinEventHook);
+  }
 
-
-void WinDozer::flushBuffer() {
-    for (short i = 0; i < BUFFSIZE; i++) inBuff[i] = '_';
-}
-
-
-void WinDozer::printBuffer() {
-    // Debug helper
-    for (char c : inBuff) std::cout << c;
-    std::cout << ("\n");
-}
-
-// https://www.youtube.com/watch?v=SETnK2ny1R0
-void WinDozer::readBuffer() {
-    std::string winID{ "" };
-    std::string rectID{ "" };
-
-    std::cmatch m;
-    std::string match;
-    //searches
-    std::regex reMoveWin{ "(M){1}(T|W\\d+){1}(R\\d+){1}" };
-    std::regex reSetRect{ "(SR){1}(\\d+){1}" };
-    std::regex reSetWin{ "(SW){1}(\\d+){1}" };
-    std::regex reEraseRect{ "(ER){1}(\\d+){1}" };
-    std::regex reEraseWin{ "(EW){1}(\\d+){1}" };
-    std::regex reFocusWin{ "(FW){1}(\\d+){1}" };
-    std::regex reAdjustWin{ "(A){1}(T|W\\d+){1}" };
-    std::regex reAdjustWinBorder{ "(A){1}(T|W\\d+){1}(B){1}" };
-    //matches
-    std::regex reGetRects{ "(\\w|\\d)*(GR)" };
-    std::regex reGetWins{ "(\\w|\\d)*(GW)" };
-    std::regex reFlush{ "(\\d|\\w)*(FLUSH)" };
-    std::regex reHelp{ "(\\d|\\w)*(HELP)" };
-
-    std::string buffString(inBuff.begin(), inBuff.end());
-
-    bool cleanedUp = false;
-
-    if (std::regex_match(buffString, reFlush)) {
-        match = "FLUSH";
-        if (verbose) std::cout << match << "\n";
-        flushBuffer();
-    }
-
-    else if (std::regex_search(buffString.c_str(), m, reMoveWin)) {
-        match = m.str();
-        if (verbose) std::cout << match << "\n";
-
-        //Start at the back
-        int i = getSuffixID(match, rectID);
-
-        //Move over the (R)ect flag
-        i--;
-        // Get the (W)indow # if one exists:
-        if (isdigit(match[i])) {
-            getSuffixID(match, winID, i);
-            moveWindow(winID, rectID);
-        }
-        //Otherwise, it's the focused window:
-        else {
-            moveWindow(rectID);
-        }
-    }
-
-    else if (std::regex_search(buffString.c_str(), m, reSetRect)) {
-        match = m.str();
-        if (verbose) std::cout << match << "\n";
-        getSuffixID(match, rectID);
-        setRectID(rectID);
-    }
-
-    else if (std::regex_search(buffString.c_str(), m, reSetWin)) {
-        match = m.str();
-        if (verbose) std::cout << match << "\n";
-        getSuffixID(match, winID);
-        setWinID(winID);
-    }
-
-    else if (std::regex_search(buffString.c_str(), m, reEraseRect)) {
-        match = m.str();
-        if (verbose) std::cout << match << "\n";
-        getSuffixID(match, rectID);
-        eraseRectID(rectID);
-    }
-
-    else if (std::regex_search(buffString.c_str(), m, reEraseWin)) {
-        match = m.str();
-        if (verbose) std::cout << match << "\n";
-        getSuffixID(match, winID);
-        eraseWinID(winID);
-    }
-
-    else if (std::regex_search(buffString.c_str(), m, reFocusWin)) {
-        match = m.str();
-        if (verbose) std::cout << match << "\n";
-        getSuffixID(match, winID);
-        // Actions that transfer focus (hopefully only this, deliberate one)
-        // need to clean up *before* the focus is transferred, otherwise
-        // it's possible to trample over some of the user's data typed elsewhere
-        cleanUp(match);
-        cleanedUp = true;
-        focusWindow(winID);
-    }
-
-    else if (std::regex_search(buffString.c_str(), m, reAdjustWinBorder)) {
-        match = m.str();
-        if (verbose) std::cout << match << "\n";
-        getSuffixID(match, winID, match.length() - 2);
-        enterAdjustWindow(winID, true);
-    }
-
-    else if (std::regex_search(buffString.c_str(), m, reAdjustWin)) {
-        match = m.str();
-        if (verbose) std::cout << match << "\n";
-        getSuffixID(match, winID);
-        enterAdjustWindow(winID, false);
-    }
-
-    else if (std::regex_match(buffString, reGetRects)) {
-        match = "GR";
-        if (verbose) std::cout << match << "\n";
-        printRectIDs();
-    }
-
-    else if (std::regex_match(buffString, reGetWins)) {
-        match = "GW";
-        if (verbose) std::cout << match << "\n";
-        printWinIDs();
-    }
-
-    else if (std::regex_match(buffString, reHelp)) {
-        match = "HELP";
-        if (verbose) std::cout << match << "\n";
-        printHelp();
-    }
-
-    if (!cleanedUp) cleanUp(match);
-
-    if (!disableBufferFlush) flushBuffer();
-}
-
-
-void WinDozer::cleanUp(std::string match) {
-    if (cleanup) {
-        INPUT input;
-        input.type = INPUT_KEYBOARD;
-        input.ki.wScan = 0;
-        input.ki.time = 0;
-        input.ki.dwExtraInfo = 0;
-        input.ki.wVk = VK_BACK;
-
-        // Modern windows apps such as Sticky Notes, Microsoft Store, etc
-        // seem to have trouble here with a loop that only contains calls to
-        // SendInput() using no delay. These modern apps seem to treat subsequent 
-        // backspaces the way a cell phone does when the user holds down the key.
-        // Instead of a constant stream of backspaces, the text starts to get deleted 
-        // in larger and larger "chunks" in order to save the user some time. 
-        // tldr: make sure we don't hit the repeat rate for these backspace inputs:
-        for (size_t i = 0; i < match.size(); i++) {
-            input.ki.dwFlags = 0; // keydown
-            SendInput(1, &input, sizeof(INPUT)); // send backspace
-            input.ki.dwFlags = KEYEVENTF_KEYUP; // keyup
-            Sleep(KBD_REPEAT_RATE); // Go slower than repeat rate, see above
-            SendInput(1, &input, sizeof(INPUT)); // send keyup
-        }
-    }
-}
-
-
-void WinDozer::ingressInput() {
-    char inChar;
-
-    if (!adjusting) {
-        if ((kbdStruct.vkCode >= 65) && (kbdStruct.vkCode <= 90)) {
-            // Letter
-            inChar = kbdStruct.vkCode;
-        }
-        else if ((kbdStruct.vkCode >= 48) && (kbdStruct.vkCode <= 57)) {
-            // Numrow
-            inChar = kbdStruct.vkCode;
-        }
-        else if ((kbdStruct.vkCode >= 96) && (kbdStruct.vkCode <= 105)) {
-            // Numpad
-            inChar = kbdStruct.vkCode - 48; // Offset num0 @ 0
-        }
-        else if ((kbdStruct.vkCode >= 112) && (kbdStruct.vkCode <= 120)) {
-            // Fn 1-9
-            inChar = kbdStruct.vkCode - 63; // Offset Fn1 @ 1
-        }
-        else if (kbdStruct.vkCode == SUBMIT) {
-            // RCtrl
-            readBuffer();
-            return;
-        }
-        else {
-            // LCtrl, L/RShift, Space, Backspace, Enter, Tab, etc...
-            return;
-        }
-    }
-    else {
-        if ((kbdStruct.vkCode >= 37) && (kbdStruct.vkCode <= 40)) {
-            // Arrow key
-            adjustWindow(kbdStruct.vkCode);
-            return;
-
-        }
-        else if (kbdStruct.vkCode == SUBMIT) {
-            std::cout << "Exit Adjustment.\n";
-            // RCtrl
-            adjusting = false;
-            adjustBorder = false;
-            hAdjustedWindow = NULL;
-            return;
-        }
-        else {
-            // Anything else
-            return;
-        }
-    }
-
-    shiftBuffer(inChar);
-    if (debugBuffer) printBuffer();
-}
-
-
-bool WinDozer::initArgs(int argc, char* argv[]) {
-    SUBMIT = VK_RCONTROL;
-
-    std::string flag; //g++ throws a warning without it for the comparison
-    for (int i = 1; i < argc; i++) {
-        flag = argv[i];
-
-        if (flag == "dbf") {
-            disableBufferFlush = true;
-        }
-
-        else if (flag == "verbose") {
-            verbose = true;
-        }
-
-        else if (flag == "debug") {
-            debugBuffer = true;
-        }
-
-        else if (flag == "cleanup") {
-            cleanup = true;
-
-            // Find the keyboard repeat rate:
-            HKEY hKey;
-            long result = RegOpenKeyExA(
-                HKEY_CURRENT_USER,
-                "Control Panel\\Keyboard",
-                0,
-                KEY_READ,
-                &hKey
-            );
-
-            if (result == ERROR_SUCCESS) {
-                DWORD size = 1024;
-                std::string buffer(size / sizeof(wchar_t), '\0');
-
-                result = RegQueryValueExA(
-                    hKey,
-                    "KeyboardSpeed",
-                    NULL,
-                    NULL,
-                    reinterpret_cast<LPBYTE>(&buffer[0]),
-                    &size
-                );
-
-                // Keys of type REG_SZ are null terminated:
-                if (result == ERROR_SUCCESS) {
-                    size_t firstNull = buffer.find_first_of('\0');
-                    if (firstNull != std::string::npos) buffer.resize(firstNull);
-
-                    KBD_REPEAT_RATE = std::stoi(buffer);
-                    RegCloseKey(hKey);
-                }
-                else {
-                    std::cout << "Error: Failed to read REG_SZ KeyboardSpeed\n";
-                    return false;
-                }
-            }
-            else {
-                std::cout << "Error: Unable to open REG_SZ KeyboardSpeed.\n";
-                return false;
-            }
-
-        }
-
-        else if (flag.substr(0, 3) == "vks") {
-            std::string val = flag.substr(3, std::string::npos);
-
-            int vkNum;
-            try {
-                vkNum = std::stoi(val);
-            }
-            catch (std::out_of_range& e) {
-                std::cout << "Invalid VK: " << val << "\n";
-                return false;
-            }
-
-            if (vkNum <= 0) {
-                std::cout << "Invalid VK: " << val << "\n";
-                return false;
-            }
-
-            SUBMIT = vkNum;
-        }
-
-        else if (flag.substr(0, 2) == "bs") {
-            std::string val = flag.substr(2, std::string::npos);
-
-            int buffSize;
-            try {
-                buffSize = std::stoi(val);
-            }
-            catch (std::out_of_range& e) {
-                std::cout << "Invalid Buffer Size\n";
-                return false;
-            }
-
-            if (buffSize <= 6) {
-                std::cout << "Invalid Buffer Size: " << buffSize << "\n"
-                    << "Buffer size must be >= 7 characters";
-                return false;
-            }
-
-            BUFFSIZE = buffSize;
-        }
-
-        else {
-            std::cout << "Invalid argument: " << flag << "\n";
-            return false;
-        }
-
-    }
-
-    return true;
-}
-
-
-void WinDozer::initAppData() {
-    appData = getenv("APPDATA");
-    appData.append("\\winDozer");
-    if (!std::filesystem::exists(appData)) {
-        std::filesystem::create_directory(appData);
-    }
-
-    settings = appData;
-    settings.append("\\settings.txt");
-}
-
-
-void WinDozer::excludeOthers() {
-    std::string lockPath = appData;
+  // Clean up lock file
+  if (hLockFile != INVALID_HANDLE_VALUE) {
+    CloseHandle(hLockFile);
+    std::string lockPath = appDataPath;
     lockPath.append("\\lock");
+    DeleteFileA(lockPath.c_str());
+  }
 
-    HANDLE hFile = CreateFileA(
-        lockPath.c_str(),
-        (GENERIC_READ | GENERIC_WRITE),
-        0,
-        NULL,
-        CREATE_ALWAYS,
-        FILE_ATTRIBUTE_NORMAL,
-        NULL
-    );
-
-    if (hFile == INVALID_HANDLE_VALUE) {
-        exit(0);
-    }
+  // Exit with the provided exit code
+  exit(exitCode);
 }
 
+void WinDozer::cleanUp(std::string command) {
+  if (cleanup) {
+    INPUT input;
+    input.type = INPUT_KEYBOARD;
+    input.ki.wScan = 0;
+    input.ki.time = 0;
+    input.ki.dwExtraInfo = 0;
+    input.ki.wVk = VK_BACK;
 
-int WinDozer::getSuffixID(std::string match, std::string& idString) {
-    int i = match.length() - 1;
-    while (isdigit(match[i])) {
-        idString.insert(0, 1, match[i]);
-        i--;
+    // Get the currently focused window to determine if delay is needed
+    HWND hForeground = GetForegroundWindow();
+    bool delayNeeded = isModernApp(hForeground);
+
+    // Backspace-based cleanup with adaptive delay.
+    // Modern apps (Sticky Notes, Microsoft Store, etc.) treat rapid backspaces
+    // like a held key, causing accelerated deletion. We add a delay between
+    // backspaces to stay below the repeat rate threshold.
+    // Classic apps (Notepad, etc.) work fine without delay, so we skip it for speed.
+    // Note: Cleanup is an ATTEMPT - if focus changed, results may vary.
+    for (size_t i = 0; i < command.size(); i++) {
+      input.ki.dwFlags = 0;
+      SendInput(1, &input, sizeof(INPUT));
+      input.ki.dwFlags = KEYEVENTF_KEYUP;
+      SendInput(1, &input, sizeof(INPUT));
+      if (delayNeeded) {
+        Sleep(KBD_REPEAT_RATE);
+      }
     }
-    return i;
+  }
 }
-
-
-int WinDozer::getSuffixID(std::string match, std::string& idString, int i) {
-    while (isdigit(match[i])) {
-        idString.insert(0, 1, match[i]);
-        i--;
-    }
-    return i;
-}
-
 
 bool WinDozer::validWindow(HWND hWnd) {
-    char classText[MAX_PATH];
-    GetClassNameA(hWnd, classText, sizeof(classText));
-    std::string className = classText;
+  char classText[MAX_PATH];
+  GetClassNameA(hWnd, classText, sizeof(classText));
+  std::string className = classText;
 
-    if (verbose) { std::cout << "Window class: " << className << "\n"; }
+  if (debug) {
+    std::cout << "Validating Window class: " << className << "\n";
+  }
 
-    if (
-        className == "Windows.UI.Core.CoreWindow" || // The start menu
-        className == "Shell_TrayWnd" || // The system tray
-        className == "Progman" || // The desktop itself / child context menu
-        className == "Program Manager" // The desktop itself / child context menu
-    ) {
-        std::cout << "Invalid Window Class: " << className << "\n";
-        return false;
+  // Non-dozable windows:
+  if (className == "Windows.UI.Core.CoreWindow" ||  // The start menu
+      className == "Shell_TrayWnd" ||               // The system tray
+      className == "Progman" ||                     // The desktop itself / child context menu
+      className == "Program Manager" ||             // The desktop itself / child context menu
+      className == "WorkerW"                        // The desktop itself / child context menu
+  ) {
+    if (debug) {
+      std::cout << "Invalid Window Class: " << className << "\n";
     }
+    return false;
+  }
 
-    return true;
+  return true;
 }
 
-
 std::string WinDozer::registered(HWND hWnd) {
-    if (winMap.empty()) return "";
+  if (winMap.empty()) {
+    return "";
+  }
 
-    std::string winID;
-    for (auto it = winMap.begin(); it != winMap.end(); it++) {
-        winID = it->first;
-        if (winMap[winID] == hWnd) return winID;
+  std::string winID;
+  for (auto it = winMap.begin(); it != winMap.end(); it++) {
+    winID = it->first;
+    if (winMap[winID] == hWnd)
+      return winID;
+  }
+
+  return "";
+}
+
+void WinDozer::copyGeometry() {
+  RECT winRect;
+  HWND hActvWnd = GetForegroundWindow();
+  if (!validWindow(hActvWnd)) {
+    return;
+  }
+
+  GetWindowRect(hActvWnd, &winRect);
+
+  storedGeometry.clear();
+  storedGeometry.push_back(winRect.left);
+  storedGeometry.push_back(winRect.top);
+  storedGeometry.push_back(winRect.bottom);
+  storedGeometry.push_back(winRect.right);
+
+  if (verbose) {
+    std::cout << getTimestamp() << "COPY Geometry from focused window\n";
+  }
+}
+
+void WinDozer::pasteGeometry() {
+  if (storedGeometry.empty() || storedGeometry.size() != 4) {
+    std::cout << "No geometry stored. Use CG to copy a window's geometry first.\n";
+    return;
+  }
+
+  HWND hActvWnd = GetForegroundWindow();
+  if (!validWindow(hActvWnd)) {
+    return;
+  }
+
+  ShowWindow(hActvWnd, SW_RESTORE);  // Window won't resize if it's maximized
+
+  // Get current window position (we'll keep this)
+  RECT currentRect;
+  GetWindowRect(hActvWnd, &currentRect);
+  int currentX = currentRect.left;
+  int currentY = currentRect.top;
+
+  // Calculate width and height from stored geometry
+  int targetWidth = storedGeometry[3] - storedGeometry[0];   // right - left
+  int targetHeight = storedGeometry[2] - storedGeometry[1];  // bottom - top
+
+  // Resize only, keeping current position
+  SetWindowPos(hActvWnd, NULL, currentX, currentY, targetWidth, targetHeight,
+               SWP_NOZORDER | SWP_SHOWWINDOW);
+
+  if (verbose) {
+    std::cout << getTimestamp() << "PASTE Geometry to focused window\n";
+  }
+}
+
+void WinDozer::pinThis() {
+  HWND hActvWnd = GetForegroundWindow();
+  if (!validWindow(hActvWnd)) {
+    return;
+  }
+
+  // Check if window is currently topmost
+  LONG exStyle = GetWindowLongPtr(hActvWnd, GWL_EXSTYLE);
+  bool isTopmost = (exStyle & WS_EX_TOPMOST) != 0;
+
+  if (isTopmost) {
+    // Remove topmost status
+    SetWindowPos(hActvWnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    if (verbose) {
+      char winText[MAX_PATH];
+      GetWindowTextA(hActvWnd, winText, MAX_PATH);
+      std::cout << getTimestamp() << "UNPIN Window " << winText << "\n";
+    }
+  } else {
+    // Set as topmost
+    SetWindowPos(hActvWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    if (verbose) {
+      char winText[MAX_PATH];
+      GetWindowTextA(hActvWnd, winText, MAX_PATH);
+      std::cout << getTimestamp() << "PIN Window " << winText << "\n";
+    }
+  }
+}
+
+void WinDozer::centerThis() {
+  HWND hActvWnd = GetForegroundWindow();
+  if (!validWindow(hActvWnd)) {
+    return;
+  }
+
+  // Restore if minimized (can't center a minimized window)
+  if (IsIconic(hActvWnd)) {
+    ShowWindow(hActvWnd, SW_RESTORE);
+  }
+
+  // Get current window rect
+  RECT winRect;
+  GetWindowRect(hActvWnd, &winRect);
+
+  // Find the center point of the window
+  POINT center;
+  center.x = (winRect.left + winRect.right) / 2;
+  center.y = (winRect.top + winRect.bottom) / 2;
+
+  // Find which monitor contains the window's center point
+  HMONITOR hMonitor = MonitorFromPoint(center, MONITOR_DEFAULTTONEAREST);
+  if (hMonitor == NULL) {
+    return;  // Can't find monitor, abort
+  }
+
+  // Get monitor info (work area excludes taskbar)
+  MONITORINFO monitorInfo;
+  monitorInfo.cbSize = sizeof(MONITORINFO);
+  if (!GetMonitorInfo(hMonitor, &monitorInfo)) {
+    return;  // Can't get monitor info, abort
+  }
+
+  // Calculate window dimensions
+  int windowWidth = winRect.right - winRect.left;
+  int windowHeight = winRect.bottom - winRect.top;
+
+  // Calculate work area dimensions
+  int workWidth = monitorInfo.rcWork.right - monitorInfo.rcWork.left;
+  int workHeight = monitorInfo.rcWork.bottom - monitorInfo.rcWork.top;
+
+  // Center the window in the work area
+  int newX = monitorInfo.rcWork.left + (workWidth - windowWidth) / 2;
+  int newY = monitorInfo.rcWork.top + (workHeight - windowHeight) / 2;
+
+  // Move the window to the centered position
+  SetWindowPos(hActvWnd, NULL, newX, newY, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_SHOWWINDOW);
+
+  if (verbose) {
+    char winText[MAX_PATH];
+    GetWindowTextA(hActvWnd, winText, MAX_PATH);
+    std::cout << getTimestamp() << "CENTER Window " << winText << "\n";
+  }
+}
+
+void WinDozer::saveLayoutSnapshot(std::string snapshotID) {
+  // Clear any existing snapshot with this ID
+  layoutSnapshots[snapshotID].clear();
+
+  // Store the currently focused window for this snapshot
+  HWND hFocused = GetForegroundWindow();
+  if (validWindow(hFocused)) {
+    snapshotFocusedWindow[snapshotID] = hFocused;
+  } else {
+    snapshotFocusedWindow[snapshotID] = NULL;
+  }
+
+  // Structure to pass data to EnumWindows callback
+  struct EnumData {
+    WinDozer* winDozer;
+    std::vector<WindowSnapshot>* windows;
+    int zOrderCounter;
+  };
+
+  std::vector<WindowSnapshot> collectedWindows;
+  EnumData enumData = {this, &collectedWindows, 0};
+
+  // Enumerate all windows and collect valid, non-minimized ones
+  // EnumWindows enumerates from top to bottom in Z-order
+  // Return true to continue enumeration, false to stop
+  EnumWindows(
+    [](HWND hWnd, LPARAM lParam) -> BOOL {
+      EnumData* data = reinterpret_cast<EnumData*>(lParam);
+
+      // Skip invalid windows (system windows, desktop, etc.)
+      if (!data->winDozer->validWindow(hWnd)) {
+        return TRUE;
+      }
+
+      // Skip windows that aren't visible
+      if (!IsWindowVisible(hWnd)) {
+        return TRUE;
+      }
+
+      // Skip minimized windows
+      if (IsIconic(hWnd)) {
+        return TRUE;
+      }
+
+      // Skip tool windows (floating toolbars, etc.) - these aren't main application windows
+      // Tool windows have the WS_EX_TOOLWINDOW extended style
+      LONG_PTR exStyle = GetWindowLongPtr(hWnd, GWL_EXSTYLE);
+      if (exStyle & WS_EX_TOOLWINDOW) {
+        return TRUE;
+      }
+
+      // Skip windows that have a parent (they're child windows, not top-level)
+      if (GetParent(hWnd) != NULL) {
+        return TRUE;
+      }
+
+      // Get window geometry first to check size
+      RECT winRect;
+      GetWindowRect(hWnd, &winRect);
+      int width = winRect.right - winRect.left;
+      int height = winRect.bottom - winRect.top;
+
+      // Skip windows that are too small (likely not real application windows)
+      // Most real application windows are at least 100x100 pixels
+      if (width < 100 || height < 100) {
+        // Worst case, we could whitelist tiny windows here if we need to
+        return TRUE;
+      }
+
+      // Get window class and title
+      char className[MAX_PATH];
+      char windowTitle[MAX_PATH];
+      GetClassNameA(hWnd, className, sizeof(className));
+      GetWindowTextA(hWnd, windowTitle, sizeof(windowTitle));
+
+      // Skip windows with no title (many system/hidden windows have empty titles)
+      // But allow windows with titles even if they're short
+      if (strlen(windowTitle) == 0) {
+        return TRUE;
+      }
+
+      // Create snapshot entry
+      WindowSnapshot snapshot;
+      snapshot.hWnd = hWnd;  // Store HWND as primary identifier
+      snapshot.className = className;
+      snapshot.windowTitle = windowTitle;
+      snapshot.rect.push_back(winRect.left);
+      snapshot.rect.push_back(winRect.top);
+      snapshot.rect.push_back(winRect.bottom);
+      snapshot.rect.push_back(winRect.right);
+      snapshot.isMaximized = IsZoomed(hWnd) != 0;  // Check if window is maximized
+      snapshot.zOrder = data->zOrderCounter++;     // Store Z-order (0 = topmost)
+
+      data->windows->push_back(snapshot);
+      return TRUE;
+    },
+    reinterpret_cast<LPARAM>(&enumData));
+
+  // Store the collected windows in the snapshot map
+  layoutSnapshots[snapshotID] = collectedWindows;
+
+  if (verbose) {
+    std::cout << getTimestamp() << "SAVE Layout Snapshot " << snapshotID << " ("
+              << collectedWindows.size() << " windows)\n";
+  } else {
+    std::cout << "Saved layout snapshot " << snapshotID << " (" << collectedWindows.size()
+              << " windows)\n";
+  }
+}
+
+void WinDozer::restoreLayoutSnapshot(std::string snapshotID) {
+  // Check if snapshot exists
+  if (layoutSnapshots.find(snapshotID) == layoutSnapshots.end()) {
+    std::cout << "No layout snapshot found for ID: " << snapshotID << "\n";
+    return;
+  }
+
+  const std::vector<WindowSnapshot>& snapshot = layoutSnapshots[snapshotID];
+  if (snapshot.empty()) {
+    std::cout << "Layout snapshot " << snapshotID << " is empty\n";
+    return;
+  }
+
+  int restored = 0;
+  int notFound = 0;
+  std::vector<std::pair<HWND, const WindowSnapshot*>> matchedWindows;
+
+  // Step 1: Match windows and collect matches
+  for (const auto& snapshot : snapshot) {
+    HWND matchedWindow = NULL;
+
+    // First, try to match by HWND (primary identifier)
+    // Check if the stored HWND is still valid and refers to the same window
+    if (IsWindow(snapshot.hWnd)) {
+      // HWND is still valid - verify it's the same window by comparing class
+      // (HWNDs are unique, but we verify to be safe)
+      char currentClassName[MAX_PATH];
+      GetClassNameA(snapshot.hWnd, currentClassName, sizeof(currentClassName));
+
+      // If class matches (title might have changed, e.g., browser tabs), use the HWND
+      if (snapshot.className == currentClassName) {
+        matchedWindow = snapshot.hWnd;
+      }
     }
 
-    return "";
+    // If HWND matching failed (window was closed/reopened), fall back to class+title matching
+    if (matchedWindow == NULL) {
+      // Structure to pass data to EnumWindows callback for matching
+      struct MatchData {
+        WinDozer* winDozer;
+        const WindowSnapshot* target;
+        HWND* found;
+      };
+
+      MatchData matchData = {this, &snapshot, &matchedWindow};
+
+      // Enumerate all windows and try to find a match by class + title
+      EnumWindows(
+        [](HWND hWnd, LPARAM lParam) -> BOOL {
+          MatchData* data = reinterpret_cast<MatchData*>(lParam);
+
+          // Skip invalid windows
+          if (!data->winDozer->validWindow(hWnd)) {
+            return TRUE;
+          }
+
+          // Get window class and title
+          char className[MAX_PATH];
+          char windowTitle[MAX_PATH];
+          GetClassNameA(hWnd, className, sizeof(className));
+          GetWindowTextA(hWnd, windowTitle, sizeof(windowTitle));
+
+          // Check if this window matches our target by class + title
+          if (data->target->className == className && data->target->windowTitle == windowTitle) {
+            *data->found = hWnd;
+            return FALSE;  // Stop enumeration (found match)
+          }
+
+          return TRUE;
+        },
+        reinterpret_cast<LPARAM>(&matchData));
+    }
+
+    if (matchedWindow != NULL) {
+      matchedWindows.push_back({matchedWindow, &snapshot});
+      restored++;
+    } else {
+      notFound++;
+    }
+  }
+
+  // Step 2: Restore window positions (but not maximized state yet)
+  for (const auto& windowPair : matchedWindows) {
+    HWND hWnd = windowPair.first;
+    const WindowSnapshot* snapshot = windowPair.second;
+
+    // Restore if minimized, but don't maximize yet
+    if (IsIconic(hWnd)) {
+      ShowWindow(hWnd, SW_RESTORE);
+    }
+
+    // Restore position and size (if not maximized, we'll maximize later)
+    if (!snapshot->isMaximized) {
+      moveWindowToRect(hWnd, snapshot->rect);
+    }
+  }
+
+  // Step 3: Restore Z-order (restore in reverse order: bottom to top)
+  // This ensures the topmost window (zOrder=0) is restored last
+  std::vector<std::pair<HWND, const WindowSnapshot*>> sortedWindows = matchedWindows;
+  std::sort(sortedWindows.begin(), sortedWindows.end(),
+            [](const std::pair<HWND, const WindowSnapshot*>& a,
+               const std::pair<HWND, const WindowSnapshot*>& b) {
+              return a.second->zOrder > b.second->zOrder;  // Higher zOrder first (bottom to top)
+            });
+
+  for (const auto& windowPair : sortedWindows) {
+    HWND hWnd = windowPair.first;
+    // Bring window to top (restoring Z-order from bottom to top)
+    SetWindowPos(hWnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+  }
+
+  // Step 4: Restore maximized state (after position is set)
+  for (const auto& windowPair : matchedWindows) {
+    HWND hWnd = windowPair.first;
+    const WindowSnapshot* snapshot = windowPair.second;
+
+    if (snapshot->isMaximized) {
+      // First restore to normal position, then maximize
+      moveWindowToRect(hWnd, snapshot->rect);
+      ShowWindow(hWnd, SW_MAXIMIZE);
+    }
+  }
+
+  // Step 5: Attempt to restore focus to the saved focused window
+  HWND hFocused = NULL;
+  if (snapshotFocusedWindow.find(snapshotID) != snapshotFocusedWindow.end()) {
+    hFocused = snapshotFocusedWindow[snapshotID];
+  }
+
+  if (hFocused != NULL && IsWindow(hFocused)) {
+    // Verify the window is still valid and was restored
+    bool wasRestored = false;
+    for (const auto& windowPair : matchedWindows) {
+      if (windowPair.first == hFocused) {
+        wasRestored = true;
+        break;
+      }
+    }
+
+    if (wasRestored) {
+      // Magic ritual to allow SetForegroundWindow
+      keybd_event(0, 0, 0, 0);
+      SetForegroundWindow(hFocused);
+    }
+  }
+
+  // If focus restoration failed, focus the last window (topmost in Z-order)
+  if (hFocused == NULL || !IsWindow(hFocused) || GetForegroundWindow() != hFocused) {
+    if (!matchedWindows.empty()) {
+      // Focus the window with the lowest zOrder (topmost)
+      HWND topWindow = NULL;
+      int minZOrder = INT_MAX;
+      for (const auto& windowPair : matchedWindows) {
+        if (windowPair.second->zOrder < minZOrder) {
+          minZOrder = windowPair.second->zOrder;
+          topWindow = windowPair.first;
+        }
+      }
+      if (topWindow != NULL) {
+        keybd_event(0, 0, 0, 0);
+        SetForegroundWindow(topWindow);
+      }
+    }
+  }
+
+  if (verbose) {
+    std::cout << getTimestamp() << "RESTORE Layout Snapshot " << snapshotID
+              << " (restored: " << restored << ", not found: " << notFound << ")\n";
+  } else {
+    std::cout << "Restored layout snapshot " << snapshotID << " (restored: " << restored
+              << ", not found: " << notFound << ")\n";
+  }
 }
