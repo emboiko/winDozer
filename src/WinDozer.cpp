@@ -450,12 +450,7 @@ void WinDozer::exitWinDozer(int exitCode) {
   }
 
   // Clean up lock file
-  if (hLockFile != INVALID_HANDLE_VALUE) {
-    CloseHandle(hLockFile);
-    std::string lockPath = appDataPath;
-    lockPath.append("\\lock");
-    DeleteFileA(lockPath.c_str());
-  }
+  cleanupLockFile();
 
   // Exit with the provided exit code
   exit(exitCode);
@@ -796,20 +791,20 @@ void WinDozer::restoreLayoutSnapshot(std::string snapshotID) {
   std::vector<std::pair<HWND, const WindowSnapshot*>> matchedWindows;
 
   // Step 1: Match windows and collect matches
-  for (const auto& snapshot : snapshot) {
+  for (const auto& windowSnapshot : snapshot) {
     HWND matchedWindow = NULL;
 
     // First, try to match by HWND (primary identifier)
     // Check if the stored HWND is still valid and refers to the same window
-    if (IsWindow(snapshot.hWnd)) {
+    if (IsWindow(windowSnapshot.hWnd)) {
       // HWND is still valid - verify it's the same window by comparing class
       // (HWNDs are unique, but we verify to be safe)
       char currentClassName[MAX_PATH];
-      GetClassNameA(snapshot.hWnd, currentClassName, sizeof(currentClassName));
+      GetClassNameA(windowSnapshot.hWnd, currentClassName, sizeof(currentClassName));
 
       // If class matches (title might have changed, e.g., browser tabs), use the HWND
-      if (snapshot.className == currentClassName) {
-        matchedWindow = snapshot.hWnd;
+      if (windowSnapshot.className == currentClassName) {
+        matchedWindow = windowSnapshot.hWnd;
       }
     }
 
@@ -822,7 +817,7 @@ void WinDozer::restoreLayoutSnapshot(std::string snapshotID) {
         HWND* found;
       };
 
-      MatchData matchData = {this, &snapshot, &matchedWindow};
+      MatchData matchData = {this, &windowSnapshot, &matchedWindow};
 
       // Enumerate all windows and try to find a match by class + title
       EnumWindows(
@@ -852,7 +847,7 @@ void WinDozer::restoreLayoutSnapshot(std::string snapshotID) {
     }
 
     if (matchedWindow != NULL) {
-      matchedWindows.push_back({matchedWindow, &snapshot});
+      matchedWindows.push_back({matchedWindow, &windowSnapshot});
       restored++;
     } else {
       notFound++;
@@ -862,7 +857,7 @@ void WinDozer::restoreLayoutSnapshot(std::string snapshotID) {
   // Step 2: Restore window positions (but not maximized state yet)
   for (const auto& windowPair : matchedWindows) {
     HWND hWnd = windowPair.first;
-    const WindowSnapshot* snapshot = windowPair.second;
+    const WindowSnapshot* windowSnapshot = windowPair.second;
 
     // Restore if minimized, but don't maximize yet
     if (IsIconic(hWnd)) {
@@ -870,8 +865,8 @@ void WinDozer::restoreLayoutSnapshot(std::string snapshotID) {
     }
 
     // Restore position and size (if not maximized, we'll maximize later)
-    if (!snapshot->isMaximized) {
-      moveWindowToRect(hWnd, snapshot->rect);
+    if (!windowSnapshot->isMaximized) {
+      moveWindowToRect(hWnd, windowSnapshot->rect);
     }
   }
 
@@ -893,11 +888,11 @@ void WinDozer::restoreLayoutSnapshot(std::string snapshotID) {
   // Step 4: Restore maximized state (after position is set)
   for (const auto& windowPair : matchedWindows) {
     HWND hWnd = windowPair.first;
-    const WindowSnapshot* snapshot = windowPair.second;
+    const WindowSnapshot* windowSnapshot = windowPair.second;
 
-    if (snapshot->isMaximized) {
+    if (windowSnapshot->isMaximized) {
       // First restore to normal position, then maximize
-      moveWindowToRect(hWnd, snapshot->rect);
+      moveWindowToRect(hWnd, windowSnapshot->rect);
       ShowWindow(hWnd, SW_MAXIMIZE);
     }
   }

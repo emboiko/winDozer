@@ -38,7 +38,7 @@ struct WinDozer {
   std::string settingsPath;
 
   // Command line arguments / flags
-  int bufferSize;
+  int bufferSize{20};
   bool disableBufferFlush;
   bool verbose;
   bool debug;
@@ -52,7 +52,7 @@ struct WinDozer {
   // Keyboard / submit settings
   DWORD SUBMIT{VK_RCONTROL};    // For triggeringbuffer evaluation (default: VK_RCONTROL)
   DWORD MODIFIER{VK_LCONTROL};  // For resize mode during adjustment (default: VK_LCONTROL)
-  int KBD_REPEAT_RATE;          // From registry, for safe cleanUp() in modern/tiled apps.
+  int KBD_REPEAT_RATE{0};       // From registry, for safe cleanUp() in modern/tiled apps.
 
   // UI / Help
   void printFigletWelcome();
@@ -131,6 +131,7 @@ struct WinDozer {
 
   // Internal / utility functions
   bool excludeOthers();
+  void cleanupLockFile();  // Clean up lock file on initialization failure
   bool initAppData();
   bool initArgs(int argc, char* argv[]);
   bool readKeyboardRepeatRate();

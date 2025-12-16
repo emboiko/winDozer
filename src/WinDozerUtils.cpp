@@ -293,6 +293,15 @@ bool WinDozer::excludeOthers() {
   }
 
   // Keep the handle open for the lifetime of the program
-  // When the process exits, Windows will automatically close it and delete the lock
   return true;
+}
+
+void WinDozer::cleanupLockFile() {
+  if (hLockFile != INVALID_HANDLE_VALUE) {
+    CloseHandle(hLockFile);
+    hLockFile = INVALID_HANDLE_VALUE;
+    std::string lockPath = appDataPath;
+    lockPath.append("\\lock");
+    DeleteFileA(lockPath.c_str());
+  }
 }

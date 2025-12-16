@@ -91,6 +91,7 @@ int main(int argc, char* argv[]) {
     }
 
     if (!winDozer.initArgs(argc, argv)) {
+      winDozer.cleanupLockFile();
       return ERROR_INVALID_COMMAND_LINE;
     }
 
