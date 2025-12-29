@@ -49,11 +49,11 @@ Keystrokes considered _valid_:
 - A-Z
 - Numrow 0-9
 - Numpad 0-9
-- Fn 1-9 (Same as numrow & numpad)
-- `<RCtrl>` (See [Command Line Arguments](#commandline))
-  - Arrow keys Left, Right, Up, Down (During an [adjustment](#adjustment))
-  - `<Modifier>` (During an [adjustment](#adjustment) - enables resize mode, default: `<LCtrl>`)
-- `<Submit>` (default: `<RCtrl>`, configurable via `vks` flag)
+- Fn 1-9 (These behave the same as numrow & numpad)
+- Arrow keys Left, Right, Up, Down (During an [adjustment](#adjustment))
+- `<Modifier>` (During an [adjustment](#adjustment) - enables resize mode, default: `<LCtrl>` - configurable via `vkm` flag - see [Command Line Arguments](#commandline))
+- `<Submit>` (default: `<RCtrl>`, configurable via `vks` flag - see [Command Line Arguments](#commandline))
+- `<Backspace>`
 
 ---
 
