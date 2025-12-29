@@ -5,11 +5,20 @@
 #include <string>
 #include "headers/WinDozer.h"
 
-void WinDozer::shiftBuffer(char inChar) {
-  for (short i = 0; i < bufferSize - 1; i++) {
-    inBuff[i] = inBuff[i + 1];
+void WinDozer::shiftBuffer(char inChar, bool isBackspace) {
+  if (isBackspace) {
+    // Backspace: shift right and add placeholder on the left
+    for (short i = bufferSize - 1; i > 0; i--) {
+      inBuff[i] = inBuff[i - 1];
+    }
+    inBuff[0] = '_';
+  } else {
+    // Normal operation: shift left and add new character on the right
+    for (short i = 0; i < bufferSize - 1; i++) {
+      inBuff[i] = inBuff[i + 1];
+    }
+    inBuff[bufferSize - 1] = inChar;
   }
-  inBuff[bufferSize - 1] = inChar;
 }
 
 void WinDozer::initBuffer() {
@@ -133,13 +142,25 @@ WinDozer::Command WinDozer::parseCommand(const std::vector<Token>& tokens) {
 
   // Check if pattern matches and update bestMatch if it's more recent
   // pattern with the highest (rightmost) position is the most recent and thus the best match
+  // When positions are equal, prefer longer patterns (more specific matches)
   auto checkPattern = [&](const std::string& patternStr, const std::string& commandName) {
     size_t position = pattern.rfind(patternStr);
-    if (position != std::string::npos &&
-        (bestMatch.position == std::string::npos || position > bestMatch.position)) {
-      bestMatch.name = commandName;
-      bestMatch.position = position;
-      bestMatch.patternStr = patternStr;
+    if (position != std::string::npos) {
+      bool shouldUpdate = false;
+      if (bestMatch.position == std::string::npos) {
+        shouldUpdate = true;
+      } else if (position > bestMatch.position) {
+        shouldUpdate = true;
+      } else if (position == bestMatch.position &&
+                 patternStr.length() > bestMatch.patternStr.length()) {
+        // Same position, but this pattern is longer (more specific) - prefer it
+        shouldUpdate = true;
+      }
+      if (shouldUpdate) {
+        bestMatch.name = commandName;
+        bestMatch.position = position;
+        bestMatch.patternStr = patternStr;
+      }
     }
   };
 
@@ -150,21 +171,24 @@ WinDozer::Command WinDozer::parseCommand(const std::vector<Token>& tokens) {
   };
 
   const std::vector<PatternDef> patternDefs = {
-    // With args:
+    // With args (longer patterns first to ensure they're preferred):
+    {"MWNRN", "MOVE_WINDOW"},     // MW1R1
+    {"AWNSN", "ADJUST_WINDOW"},   // AW1S2
+    {"ATSN", "ADJUST_THIS"},      // ATS2
     {"SRN", "SET_RECT"},          // SR1
     {"SWN", "SET_WIN"},           // SW1
     {"ERN", "ERASE_RECT"},        // ER1
     {"EWN", "ERASE_WIN"},         // EW1
     {"MTRN", "MOVE_THIS"},        // MTR1
-    {"MWNRN", "MOVE_WINDOW"},     // MW1R1
     {"FWN", "FOCUS_WIN"},         // FW1
     {"AWN", "ADJUST_WINDOW"},     // AW1
-    {"AWNSN", "ADJUST_WINDOW"},   // AW1S2
     {"AT", "ADJUST_THIS"},        // AT
-    {"ATSN", "ADJUST_THIS"},      // ATS2
     {"SSN", "SAVE_SNAPSHOT"},     // SS1
     {"RSN", "RESTORE_SNAPSHOT"},  // RS1
                                   // No args:
+    {"FLUSH", "FLUSH"},           // FLUSH
+    {"HELP", "HELP"},             // HELP
+    {"EXIT", "EXIT"},             // EXIT
     {"PT", "PIN_THIS"},           // PT
     {"CT", "CENTER_THIS"},        // CT
     {"GR", "GET_RECTS"},          // GR
@@ -172,9 +196,6 @@ WinDozer::Command WinDozer::parseCommand(const std::vector<Token>& tokens) {
     {"GS", "GET_SNAPSHOTS"},      // GS
     {"CG", "COPY_GEOMETRY"},      // CG
     {"VG", "PASTE_GEOMETRY"},     // VG
-    {"FLUSH", "FLUSH"},           // FLUSH
-    {"HELP", "HELP"},             // HELP
-    {"EXIT", "EXIT"},             // EXIT
   };
 
   for (const auto& patternDef : patternDefs) {
@@ -323,10 +344,11 @@ WinDozer::Command WinDozer::parseCommand(const std::vector<Token>& tokens) {
         // With step: AW + 5 + S + 10
         if (tokens[i].type == TokenType::COMMAND && i + 3 < tokens.size() &&
             tokens[i + 1].type == TokenType::NUMBER && tokens[i + 3].type == TokenType::NUMBER) {
-          // Verify first is "W" (or ends with "W" like "AW"), second is "S"
+          // Verify first is "W" (or ends with "W" like "AW"), second ends with "S"
           bool firstIsW = tokens[i].value == "W" ||
                           (tokens[i].value.length() > 0 && tokens[i].value.back() == 'W');
-          bool secondIsS = tokens[i + 2].type == TokenType::COMMAND && tokens[i + 2].value == "S";
+          bool secondIsS = tokens[i + 2].type == TokenType::COMMAND &&
+                           !tokens[i + 2].value.empty() && tokens[i + 2].value.back() == 'S';
           if (firstIsW && secondIsS) {
             winID = tokens[i + 1].value;
             step = tokens[i + 3].value;
@@ -356,10 +378,12 @@ WinDozer::Command WinDozer::parseCommand(const std::vector<Token>& tokens) {
   } else if (command.name == "ADJUST_THIS") {
     // Only extract step if pattern includes "SN" (e.g., "ATSN" not "AT")
     if (bestMatch.patternStr.find("SN") != std::string::npos) {
-      // Look for "S" command token followed by number
+      // Look for a command token ending with "S" followed by number
+      // Note: Tokenizer groups consecutive letters, so "ATS50" becomes Token("ATS") + Token("50")
       for (size_t i = tokens.size(); i-- > 0;) {
-        if (tokens[i].type == TokenType::COMMAND && tokens[i].value == "S" &&
-            i + 1 < tokens.size() && tokens[i + 1].type == TokenType::NUMBER) {
+        if (tokens[i].type == TokenType::COMMAND && !tokens[i].value.empty() &&
+            tokens[i].value.back() == 'S' && i + 1 < tokens.size() &&
+            tokens[i + 1].type == TokenType::NUMBER) {
           command.args.push_back(tokens[i + 1].value);  // the step
           break;
         }
@@ -432,7 +456,11 @@ bool WinDozer::executeCommand(const Command& command) {
   } else if (command.name == "FOCUS_WIN") {
     if (!command.args.empty()) {
       // Perform cleanUp in the relevant window before focusing:
-      cleanUp(std::string(static_cast<size_t>(command.commandLength), '_'));
+      std::string currentBuffer(inBuff.begin(), inBuff.end());
+      if (currentBuffer != lastCleanedBuffer) {
+        cleanUp(std::string(static_cast<size_t>(command.commandLength), '_'));
+        lastCleanedBuffer = currentBuffer;
+      }
       cleanedUp = true;
       focusWindow(command.args[0]);
     }
@@ -482,11 +510,21 @@ bool WinDozer::executeCommand(const Command& command) {
   }
 
   if (!cleanedUp) {
-    cleanUp(std::string(static_cast<size_t>(command.commandLength), '_'));
+    // Convert current buffer to string for comparison
+    std::string currentBuffer(inBuff.begin(), inBuff.end());
+
+    // Only cleanup if buffer content changed (user typed something new)
+    // This prevents duplicate cleanup when repeating commands with dbf enabled
+    if (currentBuffer != lastCleanedBuffer) {
+      cleanUp(std::string(static_cast<size_t>(command.commandLength), '_'));
+      lastCleanedBuffer = currentBuffer;
+    }
   }
 
   if (!disableBufferFlush) {
     flushBuffer();
+    // Reset tracking when buffer flushes (new command cycle)
+    lastCleanedBuffer.clear();
   }
 
   return true;
@@ -526,32 +564,38 @@ void WinDozer::interpretBuffer() {
 
 void WinDozer::ingressInput() {
   char inChar;
+  bool isBackspace = false;
 
   if (!adjusting) {
-    if ((kbdStruct.vkCode >= 65) && (kbdStruct.vkCode <= 90)) {
+    if ((kbdStruct.vkCode >= VK_A) && (kbdStruct.vkCode <= VK_Z)) {
       // Letter
       inChar = kbdStruct.vkCode;
-    } else if ((kbdStruct.vkCode >= 48) && (kbdStruct.vkCode <= 57)) {
+    } else if ((kbdStruct.vkCode >= VK_0) && (kbdStruct.vkCode <= VK_9)) {
       // Numrow
       inChar = kbdStruct.vkCode;
-    } else if ((kbdStruct.vkCode >= 96) && (kbdStruct.vkCode <= 105)) {
+    } else if ((kbdStruct.vkCode >= VK_NUMPAD0) && (kbdStruct.vkCode <= VK_NUMPAD9)) {
       // Numpad
-      inChar = kbdStruct.vkCode - 48;  // Offset num0 @ 0
-    } else if ((kbdStruct.vkCode >= 112) && (kbdStruct.vkCode <= 120)) {
-      // Fn 1-9
-      inChar = kbdStruct.vkCode - 63;  // Offset Fn1 @ 1
+      inChar = kbdStruct.vkCode - NUMPAD_TO_NUMROW_OFFSET;
+    } else if ((kbdStruct.vkCode >= VK_F1) && (kbdStruct.vkCode <= VK_F9)) {
+      // Function keys F1-F9
+      inChar = kbdStruct.vkCode - FUNCTION_KEY_TO_NUMROW_OFFSET;
+    } else if (kbdStruct.vkCode == VK_BACK) {
+      if (isPerformingCleanup) {  // Only process non-synthesized backspaces
+        return;
+      }
+      inChar = 0;  // Dummy value, won't be used
+      isBackspace = true;
     } else if (kbdStruct.vkCode == SUBMIT) {
-      // RCtrl - Use interpreter-based parsing
       interpretBuffer();
       return;
     } else {
-      // LCtrl, L/RShift, Space, Backspace, Enter, Tab, etc...
+      // Space, Enter, Tab, etc...
       return;
     }
   } else {
-    if ((kbdStruct.vkCode >= 37) && (kbdStruct.vkCode <= 40)) {
+    if ((kbdStruct.vkCode >= VK_LEFT) && (kbdStruct.vkCode <= VK_DOWN)) {
       // Arrow key - check if modifier key is held down (for resize mode)
-      bool isResizeMode = (GetAsyncKeyState(MODIFIER) & 0x8000) != 0;
+      bool isResizeMode = (GetAsyncKeyState(MODIFIER) & KEY_STATE_PRESSED) != 0;
       adjustWindow(kbdStruct.vkCode, isResizeMode);
       return;
 
@@ -563,7 +607,7 @@ void WinDozer::ingressInput() {
     }
   }
 
-  shiftBuffer(inChar);
+  shiftBuffer(inChar, isBackspace);
   if (debug) {
     printBuffer();
   }

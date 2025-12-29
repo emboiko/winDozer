@@ -43,6 +43,10 @@ struct WinDozer {
   bool verbose;
   bool debug;
   bool cleanup;
+  // Track buffer content that was cleaned (prevents repeating cleanup with dbf)
+  std::string lastCleanedBuffer;
+  // Used to ignore synthesized backspaces during cleanup
+  bool isPerformingCleanup{false};
 
   // Window adjustment state
   bool adjusting;
@@ -53,6 +57,20 @@ struct WinDozer {
   DWORD SUBMIT{VK_RCONTROL};    // For triggeringbuffer evaluation (default: VK_RCONTROL)
   DWORD MODIFIER{VK_LCONTROL};  // For resize mode during adjustment (default: VK_LCONTROL)
   int KBD_REPEAT_RATE{0};       // From registry, for safe cleanUp() in modern/tiled apps.
+
+  // Keyboard input constants
+  // GetAsyncKeyState return value: high bit (0x8000) indicates key is currently pressed
+  static constexpr SHORT KEY_STATE_PRESSED = 0x8000;
+  // Virtual key codes for letters (Windows uses ASCII values)
+  static constexpr DWORD VK_A = 'A';
+  static constexpr DWORD VK_Z = 'Z';
+  // Virtual key codes for numrow (Windows uses ASCII values)
+  static constexpr DWORD VK_0 = '0';
+  static constexpr DWORD VK_9 = '9';
+  // Numpad to numrow offset: VK_NUMPAD0 (96) -> '0' (48)
+  static constexpr int NUMPAD_TO_NUMROW_OFFSET = 48;
+  // Function key to numrow offset: VK_F1 (112) -> '1' (49), so 112 - 63 = 49
+  static constexpr int FUNCTION_KEY_TO_NUMROW_OFFSET = 63;
 
   // UI / Help
   void printFigletWelcome();
@@ -98,7 +116,7 @@ struct WinDozer {
     HWND hWnd, const std::vector<int>& rect);  // Internal: helper for multi-monitor DPI handling
 
   // Buffer management
-  void shiftBuffer(char inChar);
+  void shiftBuffer(char inChar, bool isBackspace = false);
   void initBuffer();
   void flushBuffer();
   void printBuffer();

@@ -468,6 +468,10 @@ void WinDozer::exitWinDozer(int exitCode) {
 
 void WinDozer::cleanUp(std::string command) {
   if (cleanup) {
+    // We don't want to pollute the buffer with these synthesized backspaces.
+    // This is mostly relevant for when disableBufferFlush is enabled.
+    isPerformingCleanup = true;
+
     INPUT input;
     input.type = INPUT_KEYBOARD;
     input.ki.wScan = 0;
@@ -494,6 +498,8 @@ void WinDozer::cleanUp(std::string command) {
         Sleep(KBD_REPEAT_RATE);
       }
     }
+
+    isPerformingCleanup = false;
   }
 }
 
