@@ -49,10 +49,15 @@ if "%BUILD_MODE%"=="debug" (
 )
 
 REM Static linking flags for portability (prevents DLL dependencies)
-REM -static-libgcc: static link libgcc
-REM -static-libstdc++: static link libstdc++
-REM -Wl,-Bstatic -lpthread -Wl,-Bdynamic: static link pthread (fixes libwinpthread-1.dll issue)
-set LINK_FLAGS=-static-libgcc -static-libstdc++ -Wl,-Bstatic -lpthread -Wl,-Bdynamic -lpsapi
+REM -static: fully static link all MinGW libraries (libgcc, libstdc++, pthread, etc.)
+REM This prevents libwinpthread-1.dll and other MinGW DLL dependencies
+REM Windows system DLLs (kernel32, user32, etc.) remain dynamic as required
+if "%BUILD_MODE%"=="release" (
+    set LINK_FLAGS=-static -lpsapi
+) else (
+    REM Debug build: static link runtime libs but keep debug symbols
+    set LINK_FLAGS=-static-libgcc -static-libstdc++ -Wl,-Bstatic -lpthread -Wl,-Bdynamic -lpsapi
+)
 
 %GPP% ^
     .\src\main.cpp ^
